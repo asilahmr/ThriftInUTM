@@ -5,8 +5,7 @@ A project of Application Development that allow selling and buying preloved or u
 
 | Sprint | Module Name | Frontend | Backend |
 |--------|-------------|----------|---------|
-| 1 | Login & Register User Module | 
-Screens:<br>
+| 1 | Login & Register User Module | Screens:<br>
 • [LoginScreen.js](https://github.com/asilahmr/ThriftInUTM/blob/User-Registration%26Login-Module/screens/LoginScreen.js)<br>
 • [RecoverPasswordScreen.js](https://github.com/asilahmr/ThriftInUTM/blob/User-Registration%26Login-Module/screens/RecoverPasswordScreen.js)<br>
 • [RegisterScreen.js](https://github.com/asilahmr/ThriftInUTM/blob/User-Registration%26Login-Module/screens/RegisterScreen.js)<br>
