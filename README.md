@@ -8,12 +8,10 @@ Developer: Angie Wong Siaw Thing
 | 1 | Login & Register User Module | Screens:<br> • [LoginScreen.js](https://github.com/asilahmr/ThriftInUTM/blob/User-Registration%26Login-Module/screens/LoginScreen.js)<br>• [RecoverPasswordScreen.js](https://github.com/asilahmr/ThriftInUTM/blob/User-Registration%26Login-Module/screens/RecoverPasswordScreen.js)<br>• [RegisterScreen.js](https://github.com/asilahmr/ThriftInUTM/blob/User-Registration%26Login-Module/screens/RegisterScreen.js)<br>• [ResetPasswordScreen.js](https://github.com/asilahmr/ThriftInUTM/blob/User-Registration%26Login-Module/screens/ResetPasswordScreen.js) | 
  |
 
-
-#Product & Market Subsystem
-
-Developer: AINA ZAFIRAH BINTI AHMAD MUZAMIR
+## Product & Market Subsystem
+### Developer: AINA ZAFIRAH BINTI AHMAD MUZAMIR
 
 | Sprint | Module Name | Frontend | Backend |
 |--------|--------------|----------|---------|
-| 1 | Add New Product Module | 
+| 1 | Product Listing and Management Module |  
 
