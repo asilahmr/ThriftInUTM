@@ -25,3 +25,5 @@ A project of Application Development that allow selling and buying preloved or u
 |--------|--------------|----------|---------|
 | 1 | Chat & Messaging Module |
 
+## Notes:
+1. Click on file names to navigate directly to their respective files in the repository.
