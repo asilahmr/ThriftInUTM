@@ -10,4 +10,11 @@ A project of Application Development that allow selling and buying preloved or u
 - [RegisterScreen.js](https://github.com/asilahmr/ThriftInUTM/blob/User-Registration%26Login-Module/screens/RegisterScreen.js)
 - [ResetPasswordScreen.js](https://github.com/asilahmr/ThriftInUTM/blob/User-Registration%26Login-Module/screens/ResetPasswordScreen.js)|
 
+#Product & Market Subsystem
+
+Developer: AINA ZAFIRAH BINTI AHMAD MUZAMIR
+
+| Sprint | Module Name | Frontend | Backend |
+|--------|--------------|----------|---------|
+| 1 | Add New Product Module | 
 
