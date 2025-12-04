@@ -11,7 +11,7 @@ A project of Application Development that allow selling and buying preloved or u
 **Developer: AINA ZAFIRAH BINTI AHMAD MUZAMIR**
 | Sprint | Module Name | Frontend | Backend |
 |--------|--------------|----------|---------|
-| 1 | Product Listing & Management Module | Screens:<br>
+| 1 | Product Listing & Management Module | Screens:<br>• [AddProductPage.js]()<br>• [MyProductsPage.js]()<br>• [EditProductPage.js]()<br>• [ResetPasswordScreen.js]() | Backend:<br>|
 
 ## Analytics & Insights Subsystem
 **Developer: ASILAH BINT MOHD RAZAK**
