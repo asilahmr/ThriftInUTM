@@ -11,7 +11,7 @@ A project of Application Development that allow selling and buying preloved or u
 **Developer: AINA ZAFIRAH BINTI AHMAD MUZAMIR**
 | Sprint | Module Name | Frontend | Backend |
 |--------|--------------|----------|---------|
-| 1 | Product Listing & Management Module | Screens:<br>• [AddProductScreen.js]()<br>• [MyItemsScreen.js]()<br>• [EditProductScreen.js]()<br>| Backend:<br>• [Backend Files and Folders](https://github.com/asilahmr/ThriftInUTM/tree/product-market-subsystem/thriftin-backend)<br>• [server.js](https://github.com/asilahmr/ThriftInUTM/blob/product-market-subsystem/thriftin-backend/server.js)|
+| 1 | Product Listing & Management Module | Screens:<br>• [AddProductScreen.js](https://github.com/asilahmr/ThriftInUTM/blob/product-market-subsystem/thriftin-frontend/src/screens/AddProductScreen.js)<br>• [MyItemsScreen.js](https://github.com/asilahmr/ThriftInUTM/blob/product-market-subsystem/thriftin-frontend/src/screens/MyItemsScreen.js)<br>• [EditProductScreen.js](https://github.com/asilahmr/ThriftInUTM/blob/product-market-subsystem/thriftin-frontend/src/screens/EditProductScreen.js)<br>| Backend:<br>• [Backend Files and Folders](https://github.com/asilahmr/ThriftInUTM/tree/product-market-subsystem/thriftin-backend)<br>• [server.js](https://github.com/asilahmr/ThriftInUTM/blob/product-market-subsystem/thriftin-backend/server.js)|
 
 ## Analytics & Insights Subsystem
 **Developer: ASILAH BINT MOHD RAZAK**
