@@ -1,19 +1,49 @@
+require('dotenv').config();
+
 const express = require("express");
 const mysql = require("mysql2");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const bcrypt = require("bcrypt");
 const nodemailer = require("nodemailer");
-
+const path = require('path');
 const app = express();
+const jwt = require('jsonwebtoken');
+const emailRoutes = require('./routes/emailRoutes');
+const crypto = require('crypto');
+const emailController = require('./controllers/emailController');
+
+console.log('\n=== SERVER STARTUP ===');
+console.log('JWT_SECRET loaded:', process.env.JWT_SECRET ? 'Yes' : 'No');
+console.log('JWT_SECRET value:', process.env.JWT_SECRET || 'Using fallback');
+console.log('======================\n');
+
+require('dotenv').config();
 app.use(cors());
 app.use(bodyParser.json());
+
+
+app.use(express.json());
+
+// serve uploads as static
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// import routes
+const profileRoutes = require('./routes/profileRoutes');
+const verifyRoutes = require('./routes/verifyRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+
+// mount routes under /api
+app.use('/api/profile', profileRoutes);
+app.use('/api/email', emailRoutes);
+app.use('/api/verification', verifyRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Database connection
 const db = mysql.createPool({
   host: "localhost",
   user: "root",
-  password: "",
+  password: "admin123",
   database: "thriftin_utm",
   waitForConnections: true, 
   connectionLimit: 10,  
@@ -199,29 +229,36 @@ app.post("/register", async (req, res) => {
           }
           
           const userId = userResult.insertId;
+          const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
 
           const insertStudentSql = `
             INSERT INTO students 
-            (user_id, matric, degree_type, faculty_code, enrollment_year, estimated_graduation_year) 
-            VALUES (?, ?, ?, ?, ?, ?)
+            (user_id, matric, degree_type, faculty_code, enrollment_year, estimated_graduation_year, 
+             verification_status, email_verified, email_verification_code, email_code_expiry) 
+           VALUES (?, ?, ?, ?, ?, ?, 'unverified', 0, ?, DATE_ADD(NOW(), INTERVAL 1 HOUR))
           `;
-          
-          db.query(insertStudentSql, [
-            userId,
-            matric,
-            matricInfo.degreeType,
-            matricInfo.facultyCode,
-            matricInfo.enrollmentYear,
-            estimatedGraduationYear
-          ], (err) => {
-            if (err) {
-              console.error('Database error during registration insert:', err);
-              db.query("DELETE FROM user WHERE id = ?", [userId]);
-              return res.status(500).json({ message: "Registration failed. Please try again." });
+
+          db.query(insertStudentSql, 
+            [userId, matric, matricInfo.degreeType, matricInfo.facultyCode, 
+             matricInfo.enrollmentYear, estimatedGraduationYear, verificationToken], 
+            async (err) => {
+              if (err) {
+                console.error('Database error during student registration:', err);
+                return res.status(500).json({ message: "Registration failed. Please try again." });
+              }
+
+              try {
+                await emailController.sendVerificationEmail(email, verificationToken);
+                console.log(`✓ New student registered: ${email} - Verification email sent`);
+              } catch (emailError) {
+                console.error('Failed to send verification email:', emailError);
+              }
+
+              res.status(201).json({ 
+                message: "Registration successful! Please check your email to verify your account." 
+              });
             }
-            
-            res.json({ message: "Your account has been created successfully. You can now log in." });
-          });
+          );
         });
       } catch (error) {
         console.error('Error hashing password or inserting user:', error);
@@ -253,7 +290,8 @@ app.post("/login", async (req, res) => {
       s.degree_type,
       s.faculty_code,
       s.enrollment_year,
-      s.estimated_graduation_year
+      s.estimated_graduation_year,
+      s.email_verified
     FROM user u
     LEFT JOIN students s ON u.id = s.user_id
     WHERE u.email = ?
@@ -349,6 +387,13 @@ app.post("/login", async (req, res) => {
       // Password correct - reset failed attempts and update last_login
       console.log(`✓ Password correct for: ${user.email}`);
       
+      if (user.user_type === 'student' && user.email_verified === 0) {
+        console.log(`❌ Email not verified for: ${user.email}`);
+        return res.status(403).json({ 
+          message: 'Please verify your email before logging in. Check your inbox for the verification link.' 
+        });
+      }
+      
       const resetSql = `
         UPDATE user 
         SET failed_login_attempts = 0, 
@@ -356,6 +401,24 @@ app.post("/login", async (req, res) => {
             last_login = NOW()
         WHERE id = ?`;
       db.query(resetSql, [user.id]);
+
+      //Generate JWT Token
+      const jwtSecret = process.env.JWT_SECRET || 'your-fallback-secret-key-change-in-production';
+      console.log('Using JWT_SECRET for token generation:', jwtSecret);
+      
+      const token = jwt.sign(
+        { 
+          id: user.id, 
+          email: user.email, 
+          userType: user.user_type 
+        },
+        process.env.JWT_SECRET || 'your-fallback-secret-key-change-in-production',
+        { expiresIn: '1h' }
+      );
+
+      console.log('JWT token generated');
+      console.log('Token (first 30 chars):', token.substring(0, 30) + '...');
+      console.log('Token payload:', { id: user.id, email: user.email, userType: user.user_type });
 
       // Log successful attempt
       const logSql = "INSERT INTO login_attempts (email, user_id, success, ip_address) VALUES (?, ?, true, ?)";
@@ -368,6 +431,7 @@ app.post("/login", async (req, res) => {
         console.log(`✓ Student login successful: ${user.email}`);
         responseData = {
           message: "Student login successful",
+          token: token,
           user: {
             id: user.id,
             email: user.email,
@@ -383,6 +447,7 @@ app.post("/login", async (req, res) => {
         console.log(`✓ Admin login successful: ${user.email}`);
         responseData = {
           message: "Admin login successful",
+          token: token,
           user: {
             id: user.id,
             email: user.email,

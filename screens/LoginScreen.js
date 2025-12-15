@@ -6,7 +6,8 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   Alert, 
-  Image 
+  Image,
+  ActivityIndicator
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
@@ -18,6 +19,9 @@ export default function LoginScreen({ navigation }) {
   const [rememberMe, setRememberMe] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [showResendButton, setShowResendButton] = useState(false);
 
   // Load saved credentials when component mounts
   useEffect(() => {
@@ -79,6 +83,36 @@ export default function LoginScreen({ navigation }) {
     }
   };
 
+  const handleResendVerification = async () => {
+    if (!email) {
+      Alert.alert("Error", "Please enter your email first");
+      return;
+    }
+
+    setResending(true);
+
+    try {
+      const response = await axios.post('http://10.198.209.113:3000/api/email/resend', {
+        email
+      });
+
+      Alert.alert(
+        "Success", 
+        response.data.message || "Verification email sent! Please check your inbox.",
+        [{ text: "OK" }]
+      );
+      setShowResendButton(false);
+    } catch (error) {
+      console.error('Resend error:', error.response?.data);
+      Alert.alert(
+        'Error', 
+        error.response?.data?.message || 'Failed to send verification email'
+      );
+    } finally {
+      setResending(false);
+    }
+  };
+
   const handleLogin = async () => {
     console.log("=== LOGIN ATTEMPT START ===");
     console.log("Email:", email);
@@ -93,6 +127,9 @@ export default function LoginScreen({ navigation }) {
       console.log("Validation failed");
       return;
     }
+
+    setLoading(true);
+    setShowResendButton(false);
 
     try {
       console.log("Sending request to server...");
@@ -120,16 +157,24 @@ export default function LoginScreen({ navigation }) {
       }
 
       console.log("User type:", response.data.user.userType);
+      
+      if (response.data.token) {
+        await AsyncStorage.setItem('userToken', response.data.token);
+        await AsyncStorage.setItem('userData', JSON.stringify(response.data.user));
+        console.log('Token and user data saved');
+      }
 
-      // Save credentials if remember me is checked
       await saveCredentials();
 
       if (response.data.user.userType === "admin") {
         Alert.alert("Success", response.data.message || "Admin login successful");
-        navigation.navigate("AdminHome");
+        navigation.navigate("AdminReview");
       } else if (response.data.user.userType === "student") {
         Alert.alert("Success", response.data.message || "Student login successful");
-        navigation.navigate("Home");
+        navigation.navigate("Home", { 
+          user: response.data.user, 
+          products: [] 
+        });
       } else {
         console.error("Unknown user type:", response.data.user.userType);
         Alert.alert("Error", "Unknown user type");
@@ -146,6 +191,11 @@ export default function LoginScreen({ navigation }) {
         
         const errorMessage = error.response.data?.message || 
                             `Server error (${error.response.status})`;
+        
+        if (errorMessage.includes('verify your email')) {
+          setShowResendButton(true);
+        }
+        
         Alert.alert("Login Failed", errorMessage);
       } else if (error.request) {
         console.log("No response received:");
@@ -168,6 +218,8 @@ export default function LoginScreen({ navigation }) {
       }
       
       console.log("=== ERROR END ===");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -227,9 +279,33 @@ export default function LoginScreen({ navigation }) {
       </View>
 
       {/* Login Button */}
-      <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-        <Text style={styles.loginButtonText}>Log In</Text>
+      <TouchableOpacity 
+        style={[styles.loginButton, loading && styles.buttonDisabled]} 
+        onPress={handleLogin}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.loginButtonText}>Log In</Text>
+        )}
       </TouchableOpacity>
+
+      {showResendButton && (
+        <TouchableOpacity 
+          style={[styles.resendButton, resending && styles.buttonDisabled]} 
+          onPress={handleResendVerification}
+          disabled={resending}
+        >
+          {resending ? (
+            <ActivityIndicator color="#8B1A1A" />
+          ) : (
+            <View style={styles.resendContent}>
+              <Text style={styles.resendButtonText}>Resend verification email</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      )}
 
       {/* Register Link */}
       <View style={styles.registerContainer}>
@@ -314,6 +390,31 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  resendButton: {
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#8B1A1A',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 15,
+  },
+  resendContent: {
+    alignItems: 'center',
+  },
+  resendButtonText: {
+    color: '#8B1A1A',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+  resendSubtext: {
+    color: '#666',
+    fontSize: 12,
+    marginTop: 4,
   },
   registerContainer: {
     flexDirection: 'row',

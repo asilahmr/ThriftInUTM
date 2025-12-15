@@ -1,5 +1,5 @@
 // config.js
-const API_URL = 'http://10.180.59.113:3000';
+const API_URL = 'http://10.198.209.113:3000';
 
 export default {
   API_URL,
