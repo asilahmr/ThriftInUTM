@@ -20,9 +20,11 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Import routes
 const productRoutes = require('./routes/productRoutes');
+const marketplaceRoutes = require('./routes/marketplaceRoutes');
 
 // API Routes
 app.use('/api/products', productRoutes);
+app.use('/api/marketplace', marketplaceRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

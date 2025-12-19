@@ -1,12 +1,12 @@
-// src/navigation/AppNavigator.js
+// src/navigation/AppNavigator.js - UPDATED FOR MODULE 2
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { COLORS } from '../utils/constants';
 
-// Import screens
-import MyItemsScreen from '../screens/MyItemsScreen';
-import AddProductScreen from '../screens/AddProductScreen';
+// Import bottom tab navigator and screens
+import BottomTabNavigator from './BottomTabNavigator';
+import ProductDetailsScreen from '../screens/ProductDetailsScreen';
 import EditProductScreen from '../screens/EditProductScreen';
 
 const Stack = createStackNavigator();
@@ -15,7 +15,7 @@ const AppNavigator = () => {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="MyItems"
+        initialRouteName="Main"
         screenOptions={{
           headerStyle: {
             backgroundColor: COLORS.primary,
@@ -27,21 +27,24 @@ const AppNavigator = () => {
           },
         }}
       >
+        {/* Main Bottom Tab Navigator (Home, Add, My Items) */}
         <Stack.Screen
-          name="MyItems"
-          component={MyItemsScreen}
-          options={{
-            title: 'My Items',
-            headerLeft: null, // Remove back button on main screen
+          name="Main"
+          component={BottomTabNavigator}
+          options={{ headerShown: false }}
+        />
+        
+        {/* Product Details Screen */}
+        <Stack.Screen
+          name="ProductDetails"
+          component={ProductDetailsScreen}
+          options={{ 
+            headerShown: false,
+            presentation: 'card'
           }}
         />
-        <Stack.Screen
-          name="AddProduct"
-          component={AddProductScreen}
-          options={{
-            title: 'Add New Product',
-          }}
-        />
+        
+        {/* Edit Product Screen */}
         <Stack.Screen
           name="EditProduct"
           component={EditProductScreen}

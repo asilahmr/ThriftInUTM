@@ -8,7 +8,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000, // 30 seconds
+  timeout: 60000, // Increased to 60 seconds for image upload
 });
 
 // Add token to every request
@@ -130,6 +130,46 @@ export const productApi = {
   // UC007: Delete Product
   deleteProduct: async (productId) => {
     const response = await api.delete(`/products/${productId}`);
+    return response;
+  },
+};
+
+// Marketplace API methods
+export const marketplaceApi = {
+  
+  //Get all marketplace products
+  getAllProducts: async (limit = 50, offset = 0) => {
+    const response = await api.get(`/marketplace?limit=${limit}&offset=${offset}`);
+    return response;
+  },
+  
+  // Search products
+  searchProducts: async (searchQuery) => {
+    const response = await api.get(`/marketplace/search?q=${encodeURIComponent(searchQuery)}`);
+    return response;
+  },
+  
+  // Filter by category
+  getProductsByCategory: async (category) => {
+    const response = await api.get(`/marketplace/category/${category}`);
+    return response;
+  },
+  
+  //Get product details
+  getProductDetails: async (productId) => {
+    const response = await api.get(`/marketplace/product/${productId}`);
+    return response;
+  },
+  
+  // Get recommendations
+  getRecommendations: async (limit = 10) => {
+    const response = await api.get(`/marketplace/recommendations?limit=${limit}`);
+    return response;
+  },
+  
+  // Get category stats
+  getCategoryStats: async () => {
+    const response = await api.get('/marketplace/stats/categories');
     return response;
   },
 };
