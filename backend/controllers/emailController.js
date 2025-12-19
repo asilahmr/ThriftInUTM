@@ -1,6 +1,6 @@
 const nodemailer = require('nodemailer');
 const mysql = require('mysql2');
-
+require('dotenv').config();
 const db = mysql.createPool({
   host: "localhost",
   user: "root",
@@ -20,7 +20,8 @@ const transporter = nodemailer.createTransport({
 });
 
 exports.sendVerificationEmail = async (email, token) => {
-  const verificationLink = `http://10.198.209.113:3000/api/email/verify?token=${token}`;
+  const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
+  const verificationLink = `${BASE_URL}/api/email/verify?token=${token}`;
   
   const emailHtml = `
     <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">

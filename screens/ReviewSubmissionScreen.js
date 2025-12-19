@@ -221,7 +221,7 @@ const ReviewSubmissionScreen = ({ navigation, route }) => {
         ) : null}
 
         {/* Only show action buttons if status is pending or flagged */}
-        {(review.status === 'pending' || review.status === 'flagged') ? (
+        {(review.status === 'Pending' || review.status === 'Flagged') ? (
           <View style={styles.actionButtons}>
             <TouchableOpacity 
               style={[styles.approveButton, submitting && styles.buttonDisabled]} 

@@ -136,7 +136,6 @@ const DetailsScreen = ({ navigation }) => {
     try {
       setUploading(true);
 
-      // 压缩和调整图片大小
       const manipulated = await ImageManipulator.manipulateAsync(
         imageUri,
         [{ resize: { width: 500, height: 500 } }],
@@ -146,7 +145,6 @@ const DetailsScreen = ({ navigation }) => {
         }
       );
 
-      // 检查文件大小
       const response = await fetch(manipulated.uri);
       const blob = await response.blob();
       const sizeMB = blob.size / (1024 * 1024);
