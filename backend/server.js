@@ -1,3 +1,4 @@
+// backend/server.js
 require('dotenv').config();
 
 const express = require("express");
@@ -7,33 +8,37 @@ const bodyParser = require("body-parser");
 const bcrypt = require("bcrypt");
 const nodemailer = require("nodemailer");
 const path = require('path');
-const app = express();
 const jwt = require('jsonwebtoken');
-const emailRoutes = require('./routes/emailRoutes');
 const crypto = require('crypto');
-const emailController = require('./controllers/emailController');
+
+const app = express();
+
+// Get JWT_SECRET once and use consistently
+const JWT_SECRET = process.env.JWT_SECRET || 'your-fallback-secret-key-change-in-production';
 
 console.log('\n=== SERVER STARTUP ===');
 console.log('JWT_SECRET loaded:', process.env.JWT_SECRET ? 'Yes' : 'No');
-console.log('JWT_SECRET value:', process.env.JWT_SECRET || 'Using fallback');
+console.log('JWT_SECRET value:', JWT_SECRET);
 console.log('======================\n');
 
-require('dotenv').config();
+// Middleware
 app.use(cors());
 app.use(bodyParser.json());
-
-
 app.use(express.json());
 
-// serve uploads as static
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// import routes
+// Import controllers and routes
+const emailController = require('./controllers/emailController');
+const accountRoutes = require('./routes/accountRoutes');
 const profileRoutes = require('./routes/profileRoutes');
+const emailRoutes = require('./routes/emailRoutes');
 const verifyRoutes = require('./routes/verifyRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 
-// mount routes under /api
+// Serve uploads as static
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Mount routes under /api
+app.use('/api/account', accountRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/verification', verifyRoutes);
@@ -159,7 +164,7 @@ async function sendEmail(to, subject, html) {
 }
 
 // UC001: Register Account
-app.post("/register", async (req, res) => {
+app.post("/api/auth/register", async (req, res) => {
   const { email, matric, password } = req.body;
 
   if (email.endsWith("@gmail.com")) {
@@ -269,7 +274,7 @@ app.post("/register", async (req, res) => {
 });
 
 // UC002: Login Account - Unified for Admin and Student
-app.post("/login", async (req, res) => {
+app.post("/api/auth/login", async (req, res) => {
   console.log("\n=== LOGIN REQUEST RECEIVED ===");
   console.log("Time:", new Date().toISOString());
   console.log("IP:", req.ip);
@@ -394,6 +399,38 @@ app.post("/login", async (req, res) => {
         });
       }
       
+            if (user.user_type === 'student') {
+        // 查询学生的 account_status
+        const [studentData] = await new Promise((resolve, reject) => {
+          db.query(
+            'SELECT account_status FROM students WHERE user_id = ?',
+            [user.id],
+            (err, results) => {
+              if (err) reject(err);
+              else resolve([results]);
+            }
+          );
+        });
+
+        if (studentData.length > 0) {
+          const accountStatus = studentData[0].account_status;
+
+          if (accountStatus === 'permanently_suspended') {
+            console.log(`Account permanently suspended: ${user.email}`);
+            return res.status(403).json({
+              message: 'Your account has been permanently suspended due to violation of platform rules. Please contact support for more information.'
+            });
+          }
+
+          if (accountStatus === 'suspended') {
+            console.log(`Account temporarily suspended: ${user.email}`);
+            return res.status(403).json({
+              message: 'Your account is temporarily suspended. Please contact support for more information.'
+            });
+          }
+        }
+      }
+
       const resetSql = `
         UPDATE user 
         SET failed_login_attempts = 0, 
@@ -402,17 +439,16 @@ app.post("/login", async (req, res) => {
         WHERE id = ?`;
       db.query(resetSql, [user.id]);
 
-      //Generate JWT Token
-      const jwtSecret = process.env.JWT_SECRET || 'your-fallback-secret-key-change-in-production';
-      console.log('Using JWT_SECRET for token generation:', jwtSecret);
+      // Generate JWT Token with consistent secret
+      console.log('Using JWT_SECRET for token generation:', JWT_SECRET);
       
       const token = jwt.sign(
         { 
           id: user.id, 
           email: user.email, 
-          userType: user.user_type 
+          userType: user.user_type  // Using userType consistently
         },
-        process.env.JWT_SECRET || 'your-fallback-secret-key-change-in-production',
+        JWT_SECRET,  // Use the same constant
         { expiresIn: '1h' }
       );
 
@@ -473,7 +509,7 @@ app.post("/login", async (req, res) => {
 
 
 // UC003: Recover Password - Request Reset （send code）
-app.post("/recover-password", async (req, res) => {
+app.post("/api/auth/recover-password", async (req, res) => {
   const { email } = req.body;
 
   if (email.endsWith("@gmail.com")) {
@@ -585,7 +621,7 @@ app.post("/recover-password", async (req, res) => {
 });
 
 // UC003: Reset Password - Confirm New Password
-app.post("/reset-password", async (req, res) => {
+app.post("/api/auth/reset-password", async (req, res) => {
   const { email, token, newPassword } = req.body;
 
   // Step 1: Validate password strength

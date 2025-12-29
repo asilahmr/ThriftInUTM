@@ -8,8 +8,7 @@ import {
   Alert, 
   Image 
 } from 'react-native';
-import axios from 'axios';
-import config from '../config';
+import api from '../utils/api';
 
 export default function RegisterScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -100,7 +99,7 @@ export default function RegisterScreen({ navigation }) {
     }
 
     try {
-      const response = await axios.post(config.endpoints.register, { 
+      const response = await api.post('/api/auth/register', { 
         email, 
         matric, 
         password 

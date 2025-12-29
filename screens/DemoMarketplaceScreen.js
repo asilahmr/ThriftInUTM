@@ -1,18 +1,21 @@
+// screens/DemoMarketplaceScreen.js
 import React from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   ScrollView,
+  TouchableOpacity,
   StatusBar,
-  Alert
+  Alert,
+  SafeAreaView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import TransactionGuard from '../components/TransactionGuard';
 
-export default function HomePage({ navigation }) {
+export default function DemoMarketplaceScreen({ navigation }) {
   
+  // demo buy product navigation
   const handleBuyProduct = () => {
     Alert.alert(
       'Purchase Successful! ✓',
@@ -21,6 +24,7 @@ export default function HomePage({ navigation }) {
     );
   };
 
+  // demo sell item navigation
   const handleSellItem = () => {
     navigation.navigate('DemoSellItem');
   };
@@ -34,28 +38,23 @@ export default function HomePage({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#A30F0F" />
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#A94442" />
       
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>ThriftIn UTM</Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Ionicons name="notifications-outline" size={24} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            onPress={() => navigation.navigate('Profile')} 
-            style={styles.profileButton}
-          >
-            <Ionicons name="person-circle-outline" size={32} color="#fff" />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>ThriftIn UTM</Text>
+        <TouchableOpacity>
+          <Ionicons name="notifications-outline" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.content}>
         {/* Search Bar */}
-        <View style={styles.searchSection}>
+        <View style={styles.searchContainer}>
           <View style={styles.searchBar}>
             <Ionicons name="search" size={20} color="#666" />
             <Text style={styles.searchText}>Browse Items</Text>
@@ -89,7 +88,7 @@ export default function HomePage({ navigation }) {
         {/* Demo Product Card */}
         <View style={styles.productCard}>
           <View style={styles.productImagePlaceholder}>
-            <Ionicons name="calculator" size={80} color="#A30F0F" />
+            <Ionicons name="calculator" size={80} color="#A94442" />
           </View>
 
           <View style={styles.productInfo}>
@@ -100,10 +99,6 @@ export default function HomePage({ navigation }) {
               Casio FX-991ES Plus. Fully functional, with case.
             </Text>
 
-            <View style={styles.categoryBadge}>
-              <Text style={styles.categoryBadgeText}>Stationery</Text>
-            </View>
-
             {/* Seller Info */}
             <View style={styles.sellerInfo}>
               <View style={styles.sellerAvatar}>
@@ -113,78 +108,53 @@ export default function HomePage({ navigation }) {
                 <Text style={styles.sellerName}>{demoProduct.seller}</Text>
                 <Text style={styles.sellerMatric}>A23CS8234</Text>
               </View>
-              <TouchableOpacity style={styles.chatIcon}>
-                <Ionicons name="chatbubble-ellipses-outline" size={20} color="#A30F0F" />
-              </TouchableOpacity>
             </View>
 
-            {/* Action Buttons */}
-            <View style={styles.actionButtons}>
-              <TouchableOpacity style={styles.favoriteButton}>
-                <Ionicons name="heart-outline" size={24} color="#A30F0F" />
-              </TouchableOpacity>
-              
-              {/* Buy Button - Protected */}
-              <TransactionGuard onAllowed={handleBuyProduct}>
-                <View style={styles.buyButton}>
-                  <Text style={styles.buyButtonText}>Buy Now</Text>
-                </View>
-              </TransactionGuard>
-            </View>
+            {/* Buy Button - Protected */}
+            <TransactionGuard onAllowed={handleBuyProduct}>
+              <View style={styles.buyButton}>
+                <Text style={styles.buyButtonText}>Buy Now</Text>
+              </View>
+            </TransactionGuard>
           </View>
         </View>
 
         {/* Info Note */}
         <View style={styles.infoBox}>
           <Ionicons name="information-circle" size={20} color="#3B82F6" />
-          <View style={styles.infoTextContainer}>
-            <Text style={styles.infoTitle}>Demo Mode</Text>
-            <Text style={styles.infoText}>
-              The "Buy Now" and "Sell an Item" buttons are protected. Try them to see how TransactionGuard works!
-            </Text>
-          </View>
+          <Text style={styles.infoText}>
+            This is a demo marketplace. The "Buy Now" and "Sell an Item" buttons are protected by TransactionGuard.
+          </Text>
         </View>
 
         <View style={{ height: 40 }} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F5F5F5',
   },
   header: {
-    backgroundColor: '#A30F0F',
+    backgroundColor: '#A94442',
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 50,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
   },
-  title: {
-    fontSize: 24,
+  headerTitle: {
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff',
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  iconButton: {
-    padding: 4,
-  },
-  profileButton: { 
-    padding: 4,
+    color: '#FFFFFF',
   },
   content: {
     flex: 1,
   },
-  searchSection: {
+  searchContainer: {
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 15,
@@ -208,7 +178,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#A30F0F',
+    backgroundColor: '#A94442',
     borderRadius: 12,
     paddingVertical: 14,
     gap: 8,
@@ -223,19 +193,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
     gap: 10,
-    backgroundColor: '#FFFFFF',
   },
   categoryChip: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E0E0E0',
   },
   categoryChipActive: {
-    backgroundColor: '#A30F0F',
-    borderColor: '#A30F0F',
+    backgroundColor: '#A94442',
+    borderColor: '#A94442',
   },
   categoryText: {
     fontSize: 14,
@@ -250,7 +219,6 @@ const styles = StyleSheet.create({
   productCard: {
     backgroundColor: '#FFFFFF',
     marginHorizontal: 20,
-    marginTop: 16,
     borderRadius: 16,
     overflow: 'hidden',
     shadowColor: '#000',
@@ -277,7 +245,7 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#A30F0F',
+    color: '#A94442',
     marginBottom: 8,
   },
   productCondition: {
@@ -289,20 +257,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     lineHeight: 20,
-    marginBottom: 12,
-  },
-  categoryBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
     marginBottom: 16,
-  },
-  categoryBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#92400E',
   },
   sellerInfo: {
     flexDirection: 'row',
@@ -317,7 +272,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#A30F0F',
+    backgroundColor: '#A94442',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -336,28 +291,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
   },
-  chatIcon: {
-    marginLeft: 'auto',
-    padding: 8,
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'center',
-  },
-  favoriteButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 12,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
   buyButton: {
-    flex: 1,
-    backgroundColor: '#A30F0F',
+    backgroundColor: '#A94442',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
@@ -376,19 +311,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#DBEAFE',
-    alignItems: 'flex-start',
-  },
-  infoTextContainer: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  infoTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1E40AF',
-    marginBottom: 4,
   },
   infoText: {
+    flex: 1,
+    marginLeft: 12,
     fontSize: 13,
     color: '#1E40AF',
     lineHeight: 18,

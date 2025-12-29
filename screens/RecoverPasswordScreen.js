@@ -9,8 +9,7 @@ import {
   ActivityIndicator, 
   Image 
 } from 'react-native';
-import axios from 'axios';
-import config from '../config';
+import api from '../utils/api';
 
 export default function RecoverPasswordScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -31,7 +30,7 @@ export default function RecoverPasswordScreen({ navigation }) {
     setLoading(true);
     
     try {
-      const response = await axios.post(config.endpoints.recoverPassword, { 
+      const response = await api.post('/api/auth/recover-password', { 
         email 
       });
       setLoading(false);

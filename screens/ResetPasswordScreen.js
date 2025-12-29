@@ -8,8 +8,7 @@ import {
   Alert, 
   Image 
 } from 'react-native';
-import axios from 'axios';
-import config from '../config';
+import api from '../utils/api';
 
 export default function ResetPasswordScreen({ route, navigation }) {
   const emailFromRoute = route.params?.email || '';
@@ -53,7 +52,7 @@ export default function ResetPasswordScreen({ route, navigation }) {
     }
 
     try {
-      const response = await axios.post(config.endpoints.resetPassword, { 
+      const response = await api.post('/api/auth/reset-password', { 
         email,
         token: code, 
         newPassword 
@@ -93,7 +92,7 @@ export default function ResetPasswordScreen({ route, navigation }) {
         keyboardType="email-address"
         autoCapitalize="none"
         autoCorrect={false}
-        editable={!emailFromRoute} // 如果从上一页传来，则不可编辑
+        editable={!emailFromRoute}
       />
 
       {/* Verification Code Input */}
@@ -148,20 +147,20 @@ export default function ResetPasswordScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   container: {
-  flex: 1,
-  justifyContent: 'center',
-  padding: 20,
-  backgroundColor: '#fff',
-},
-logoContainer: {
-  alignItems: 'center',
-  marginTop: -60,  
-},
-logo: {
-  width: 280,      
-  height: 180,    
-  marginBottom: 15,
-},
+    flex: 1,
+    justifyContent: 'center',
+    padding: 20,
+    backgroundColor: '#fff',
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginTop: -60,  
+  },
+  logo: {
+    width: 280,      
+    height: 180,    
+    marginBottom: 15,
+  },
   title: {
     fontSize: 24,
     fontWeight: 'bold',

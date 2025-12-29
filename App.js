@@ -15,9 +15,16 @@ import DetailsScreen from './screens/DetailsScreen';
 import VerificationScreen from './screens/VerificationScreen';
 
 // Admin Screens
+import AdminDashboardScreen from './screens/AdminDashboardScreen';
 import AdminReviewScreen from './screens/AdminReviewScreen';
 import ReviewSubmissionScreen from './screens/ReviewSubmissionScreen';
 import AdminHistoryScreen from './screens/AdminHistoryScreen';
+import UserAccessManagementScreen from './screens/UserAccessManagementScreen';
+import ReportDetailScreen from './screens/ReportDetailScreen'; 
+
+// Demo Screens (for testing TransactionGuard)
+import DemoMarketplaceScreen from './screens/DemoMarketplaceScreen'; // Demo
+import DemoSellItemScreen from './screens/DemoSellItemScreen'; // Demo
 
 const Stack = createStackNavigator();
 
@@ -44,9 +51,18 @@ export default function App() {
         <Stack.Screen name="Verification" component={VerificationScreen} />
         
         {/* Admin Screens */}
+        <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
         <Stack.Screen name="AdminReview" component={AdminReviewScreen} />
         <Stack.Screen name="AdminHistory" component={AdminHistoryScreen} />
         <Stack.Screen name="ReviewSubmission" component={ReviewSubmissionScreen} />
+        
+        {/* Admin - User Access Management */}
+        <Stack.Screen name="UserAccessManagement" component={UserAccessManagementScreen} />
+        <Stack.Screen name="ReportDetail" component={ReportDetailScreen} />
+        
+        {/* Demo Sell Item Screen (called from HomePage) */}
+        <Stack.Screen name="DemoSellItem" component={DemoSellItemScreen} />
+        <Stack.Screen name="DemoMarketplace" component={DemoMarketplaceScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

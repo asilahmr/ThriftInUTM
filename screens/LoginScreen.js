@@ -10,8 +10,7 @@ import {
   ActivityIndicator
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
-import config from '../config';
+import api from '../utils/api';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -92,7 +91,7 @@ export default function LoginScreen({ navigation }) {
     setResending(true);
 
     try {
-      const response = await axios.post('http://10.198.209.113:3000/api/email/resend', {
+      const response = await api.post('/api/email/resend', {
         email
       });
 
@@ -133,10 +132,8 @@ export default function LoginScreen({ navigation }) {
 
     try {
       console.log("Sending request to server...");
-      console.log("URL:", config.endpoints.login);
-      console.log("Data:", { email, password: "***" });
-
-      const response = await axios.post(config.endpoints.login, {
+      
+      const response = await api.post('/api/auth/login', {
         email,
         password
       });
@@ -168,7 +165,7 @@ export default function LoginScreen({ navigation }) {
 
       if (response.data.user.userType === "admin") {
         Alert.alert("Success", response.data.message || "Admin login successful");
-        navigation.navigate("AdminReview");
+        navigation.navigate("AdminDashboard");
       } else if (response.data.user.userType === "student") {
         Alert.alert("Success", response.data.message || "Student login successful");
         navigation.navigate("Home", { 
