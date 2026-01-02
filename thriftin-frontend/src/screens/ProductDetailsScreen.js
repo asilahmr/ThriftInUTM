@@ -56,6 +56,26 @@ const ProductDetailsScreen = ({ route, navigation }) => {
     );
   };
 
+  const handleBuyNow = () => {
+    if (!product) return;
+
+    if (product.status !== 'active') {
+      Alert.alert('Unavailable', 'This product is no longer available for purchase.');
+      return;
+    }
+
+    const firstImage = product.images && product.images.length > 0
+      ? product.images[0].image_url
+      : null;
+
+    console.log('🛒 Navigating to checkout for product:', productId);
+    
+    navigation.navigate('Checkout', {
+      productId: product.product_id,
+      productImage: firstImage
+    });
+  };
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -78,6 +98,8 @@ const ProductDetailsScreen = ({ route, navigation }) => {
   const imageUrl = currentImage
     ? `${API_BASE_URL.replace('/api', '')}${currentImage.image_url}`
     : 'https://via.placeholder.com/400';
+
+  const isAvailable = product.status === 'active';
 
   return (
     <View style={styles.container}>
@@ -132,6 +154,13 @@ const ProductDetailsScreen = ({ route, navigation }) => {
           >
             <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
+
+          {/* NEW: Status Badge (if sold) */}
+          {!isAvailable && (
+            <View style={styles.soldBadge}>
+              <Text style={styles.soldBadgeText}>SOLD</Text>
+            </View>
+          )}
         </View>
 
         {/* Product Info */}
@@ -193,24 +222,52 @@ const ProductDetailsScreen = ({ route, navigation }) => {
                 {new Date(product.created_at).toLocaleDateString()}
               </Text>
             </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Status:</Text>
+              <Text style={[
+                styles.detailValue,
+                { color: isAvailable ? COLORS.success : COLORS.error }
+              ]}>
+                {isAvailable ? 'Available' : 'Sold'}
+              </Text>
+            </View>
           </View>
         </View>
       </ScrollView>
 
-      {/* Contact Button */}
+      {/* UPDATED: Footer with Buy Now and Contact Buttons */}
       <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.contactButton}
-          onPress={handleContactSeller}
-        >
-          <Text style={styles.contactButtonText}>📧 Contact Seller</Text>
-        </TouchableOpacity>
+        {/* Show Buy Now button only if product is available */}
+        {isAvailable ? (
+          <View style={styles.footerButtons}>
+            <TouchableOpacity
+              style={styles.contactButtonSmall}
+              onPress={handleContactSeller}
+            >
+              <Text style={styles.contactButtonSmallText}>📧 Contact</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.buyNowButton}
+              onPress={handleBuyNow}
+            >
+              <Text style={styles.buyNowButtonText}>🛒 Buy Now</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          // If sold, only show contact button
+          <TouchableOpacity
+            style={styles.contactButton}
+            onPress={handleContactSeller}
+          >
+            <Text style={styles.contactButtonText}>📧 Contact Seller</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
 };
 
-// Helper function for condition colors
 const getConditionColor = (condition) => {
   const colors = {
     'Like New': { backgroundColor: COLORS.success + '20', borderColor: COLORS.success },
@@ -288,6 +345,26 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 24,
     color: COLORS.text,
+  },
+  
+  soldBadge: {
+    position: 'absolute',
+    top: 40,
+    right: 16,
+    backgroundColor: COLORS.error,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  soldBadgeText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   content: {
     padding: 20,
@@ -410,6 +487,38 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
   },
+ 
+  footerButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  contactButtonSmall: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  contactButtonSmallText: {
+    color: COLORS.text,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  buyNowButton: {
+    flex: 2,
+    backgroundColor: COLORS.primary,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  buyNowButtonText: {
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  
   contactButton: {
     backgroundColor: COLORS.primary,
     padding: 16,

@@ -1,4 +1,4 @@
-// src/navigation/BottomTabNavigator.js
+// src/navigation/BottomTabNavigator.js - UPDATED WITH 4 TABS
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text, StyleSheet } from 'react-native';
@@ -7,7 +7,8 @@ import { COLORS } from '../utils/constants';
 // Import screens
 import HomeScreen from '../screens/HomeScreen';
 import AddProductScreen from '../screens/AddProductScreen';
-import MyItemsScreen from '../screens/MyItemsScreen';
+import ProfileScreen from '../screens/ProfileScreen';
+import MyWalletScreen from '../screens/MyWalletScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -52,12 +53,22 @@ const BottomTabNavigator = () => {
         }}
       />
       <Tab.Screen
-        name="MyItems"
-        component={MyItemsScreen}
+        name="Profile"
+        component={ProfileScreen}
         options={{
-          tabBarLabel: 'My Items',
+          tabBarLabel: 'Profile',
           tabBarIcon: ({ focused }) => (
             <TabIcon focused={focused} icon="👤" />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Wallet"
+        component={MyWalletScreen}
+        options={{
+          tabBarLabel: 'Wallet',
+          tabBarIcon: ({ focused }) => (
+            <TabIcon focused={focused} icon="💰" />
           ),
         }}
       />

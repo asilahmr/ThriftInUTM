@@ -16,7 +16,6 @@ const HomeScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
 
-  // Fetch products on screen focus
   useFocusEffect(
     useCallback(() => {
       fetchProducts();
@@ -46,7 +45,6 @@ const HomeScreen = ({ navigation }) => {
       setRecommendations(response.data || []);
     } catch (error) {
       console.log('ℹ️ No recommendations available yet (need viewing history)');
-      // Don't show error - recommendations are optional
       setRecommendations([]);
     }
   };

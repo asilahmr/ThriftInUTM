@@ -41,7 +41,7 @@ api.interceptors.response.use(
 // Product API methods
 export const productApi = {
   
-  // UC004: Add New Product
+  // Add New Product
   addProduct: async (productData, images) => {
     console.log('📤 Attempting to add product...');
     console.log('Product data:', productData);
@@ -83,7 +83,7 @@ export const productApi = {
     }
   },
   
-  // UC005: Get My Products
+  // Get My Products
   getMyProducts: async () => {
     const response = await api.get('/products/my-products');
     return response;
@@ -95,7 +95,7 @@ export const productApi = {
     return response;
   },
   
-  // UC006: Update Product
+  // Update Product
   updateProduct: async (productId, productData, newImages = null) => {
     if (newImages && newImages.length > 0) {
       // Update with new images
@@ -127,7 +127,7 @@ export const productApi = {
     }
   },
   
-  // UC007: Delete Product
+  // Delete Product
   deleteProduct: async (productId) => {
     const response = await api.delete(`/products/${productId}`);
     return response;
@@ -173,5 +173,83 @@ export const marketplaceApi = {
     return response;
   },
 };
+
+export const orderApi = {
+  
+  // Prepare checkout
+  prepareCheckout: async (productId) => {
+    const response = await api.get(`/orders/checkout/${productId}`);
+    return response;
+  },
+  
+  // Process payment and create order
+ processPayment: async (productId) => {
+  const response = await api.post('/orders/purchase', {
+    productId
+  });
+  return response;
+},
+  
+  // Get order history
+  getOrderHistory: async () => {
+    const response = await api.get('/orders/history');
+    return response;
+  },
+  
+  // Get order receipt
+  getOrderReceipt: async (orderId) => {
+    const response = await api.get(`/orders/receipt/${orderId}`);
+    return response;
+  },
+  
+  // Cancel order
+  cancelOrder: async (orderId) => {
+    const response = await api.put(`/orders/cancel/${orderId}`);
+    return response;
+  },
+};
+
+export const walletApi = {
+  
+  // Get wallet balance
+  getBalance: async () => {
+    const response = await api.get('/wallet/balance');
+    return response;
+  },
+  
+  // Get wallet summary (balance + statistics)
+  getSummary: async () => {
+    const response = await api.get('/wallet/summary');
+    return response;
+  },
+  
+  // Top up wallet
+  topUp: async (amount, topUpMethod) => {
+    const response = await api.post('/wallet/topup', {
+      amount,
+      topUpMethod
+    });
+    return response;
+  },
+  
+  // Get transaction history
+  getTransactions: async (limit = 50, offset = 0) => {
+    const response = await api.get(`/wallet/transactions?limit=${limit}&offset=${offset}`);
+    return response;
+  },
+  
+  // Check sufficient balance
+  checkBalance: async (amount) => {
+    const response = await api.get(`/wallet/check-balance?amount=${amount}`);
+    return response;
+  },
+  
+  // Get transaction statistics
+  getStats: async () => {
+    const response = await api.get('/wallet/stats');
+    return response;
+  },
+};
+
 
 export default api;
