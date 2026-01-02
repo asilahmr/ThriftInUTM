@@ -3,7 +3,7 @@ const db = require('../config/db');
 
 class ProductModel {
   
-  // UC004: Add New Product
+  // Add New Product
   static async createProduct(productData) {
     const { seller_id, name, category, description, price, condition } = productData;
     
@@ -37,7 +37,7 @@ class ProductModel {
     await db.query(query, [values]);
   }
 
-  // UC005: View Own Product Listing
+  // View Own Product Listing
   static async getProductsBySeller(sellerId) {
     const query = `
       SELECT 
@@ -108,7 +108,7 @@ class ProductModel {
     return { ...rows[0], images };
   }
 
-  // UC006: Edit Product Details
+  // Edit Product Details
   static async updateProduct(productId, sellerId, updateData) {
     const { name, category, description, price, condition } = updateData;
     
@@ -136,7 +136,7 @@ class ProductModel {
     }
   }
 
-  // UC007: Delete Product
+  // Delete Product
   static async deleteProduct(productId, sellerId = null) {
     let query = 'UPDATE products SET status = ? WHERE product_id = ?';
     const params = ['deleted', productId];

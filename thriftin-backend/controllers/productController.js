@@ -4,7 +4,7 @@ const { validateProductData, validateImages } = require('../utils/validation');
 
 class ProductController {
 
-  // UC004: Add New Product
+  // Add New Product
   static async addProduct(req, res) {
     try {
       const sellerId = req.user.user_id;
@@ -59,7 +59,7 @@ class ProductController {
     }
   }
 
-  // UC005: View Own Product Listing
+  // View Own Product Listing
   static async getMyProducts(req, res) {
     try {
       const sellerId = req.user.user_id;
@@ -121,7 +121,7 @@ class ProductController {
     }
   }
 
-  // UC006: Edit Product Details
+  // Edit Product Details
   static async updateProduct(req, res) {
     try {
       const productId = req.params.id;
@@ -191,7 +191,7 @@ class ProductController {
     }
   }
 
-  // UC007: Delete Product
+  // Delete Product
   static async deleteProduct(req, res) {
     try {
       const productId = req.params.id;

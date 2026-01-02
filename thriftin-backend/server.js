@@ -21,10 +21,15 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Import routes
 const productRoutes = require('./routes/productRoutes');
 const marketplaceRoutes = require('./routes/marketplaceRoutes');
+const orderRoutes = require('./routes/orderRoutes');
+const walletRoutes = require('./routes/walletRoutes');
 
 // API Routes
 app.use('/api/products', productRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/wallet', walletRoutes);
+
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
