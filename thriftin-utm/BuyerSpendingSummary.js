@@ -5,7 +5,9 @@ import { Dimensions } from 'react-native';
 import ViewShot from 'react-native-view-shot';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import Icon from 'react-native-vector-icons/Ionicons';
 import API_BASE from './config';
+import MonthFilter from './MonthFilter';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -22,15 +24,30 @@ const BuyerSpendingSummary = ({ route, navigation }) => {
   const [chartReady, setChartReady] = useState(false);
   const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, value: 0, date: '', });
 
+  // Filter State
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [filter, setFilter] = useState({ type: 'all', month: null, year: null, label: 'All Time' });
+
   const chartRef = useRef();
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [filter]);
 
   const fetchData = async () => {
+    setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/api/buying/user/${userId}`);
+      // Build query params
+      let queryStr = '';
+      const params = [];
+      if (filter.type !== 'all') {
+        params.push(`type=${filter.type}`);
+        if (filter.month) params.push(`month=${filter.month}`);
+        if (filter.year) params.push(`year=${filter.year}`);
+      }
+      if (params.length > 0) queryStr = `?${params.join('&')}`;
+
+      const response = await fetch(`${API_BASE}/api/buying/user/${userId}${queryStr}`);
       const data = await response.json();
 
       const itemsArray = Array.isArray(data.items) ? data.items : Array.isArray(data) ? data : [];
@@ -120,10 +137,14 @@ const BuyerSpendingSummary = ({ route, navigation }) => {
               th, td { border: 1px solid #ddd; padding: 6px; text-align: center; }
               th { background-color: #c70000; color: white; }
               img { width: 100%; max-width: 100%; height: auto; margin-top: 10px; }
+              .header-info { margin-bottom: 20px; color: #555; }
             </style>
           </head>
           <body>
             <h2>Buyer Spending Summary (STUDENT)</h2>
+            <div class="header-info">
+              <p>Period: ${filter.label}</p>
+            </div>
             <p><b>Total Spending:</b> RM ${totalSpending.toFixed(2)}</p>
             <p><b>Total Items Bought:</b> ${totalItems}</p>
 
@@ -167,22 +188,95 @@ const BuyerSpendingSummary = ({ route, navigation }) => {
   }
 
   const isExportDisabled = trendData.length === 0 || totalSpending === 0 || totalItems === 0;
-  const formattedTrend = trendData.map(t => {
+
+  // Process Trend Data labels
+  const labels = [];
+  const dataPoints = [];
+
+  // Logic adapted from SalesDashboard for consistency
+  trendData.forEach((t, index) => {
     // Robust parsing: handle both ISO string (with T) and YYYY-MM-DD
     const dateStr = typeof t.date === 'string' && t.date.includes('T') ? t.date.split('T')[0] : t.date;
-    const parts = String(dateStr).split('-');
-    const d = new Date(parts[0], parts[1] - 1, parts[2]); // Year, Month (0-index), Day
-    return {
-      day: d.getDate(),
-      month: d.toLocaleString('default', { month: 'short' }),
-      year: d.getFullYear(),
-      total: Number(t.total) || 0,
-    };
+    const parts = String(dateStr).split('-'); // [YYYY, MM, DD] or [YYYY, MM] or [YYYY]
+
+    let label = '';
+
+    if (parts.length === 1) {
+      label = parts[0];
+    } else if (parts.length === 2) {
+      const d = new Date(parts[0], parts[1] - 1);
+      label = d.toLocaleString('default', { month: 'short' });
+    } else {
+      // Daily - show label if month changes
+      const currentMonthKey = `${parts[0]}-${parts[1]}`;
+      let prevMonthKey = null;
+      if (index > 0) {
+        const prevRaw = trendData[index - 1].date;
+        const prevStr = typeof prevRaw === 'string' && prevRaw.includes('T') ? prevRaw.split('T')[0] : prevRaw;
+        const prevParts = String(prevStr).split('-');
+        if (prevParts.length >= 2) prevMonthKey = `${prevParts[0]}-${prevParts[1]}`;
+      }
+
+      if (index === 0 || currentMonthKey !== prevMonthKey) {
+        const d = new Date(parts[0], parts[1] - 1, parts[2]);
+        label = d.toLocaleString('default', { month: 'short' });
+      }
+    }
+
+    const val = Number(t.total) || 0;
+    dataPoints.push(val);
+    labels.push(label);
   });
+
+  const chartConfig = {
+    backgroundColor: '#fff',
+    backgroundGradientFrom: '#fff',
+    backgroundGradientTo: '#fff',
+    decimalPlaces: 2,
+    color: (opacity = 1) => `rgba(199,0,0,${opacity})`,
+    labelColor: (opacity = 1) => `rgba(0,0,0,${opacity})`,
+    propsForDots: {
+      r: '4',
+      strokeWidth: '2',
+      stroke: '#c70000',
+    },
+  };
+
+  const chartData = {
+    labels: labels,
+    datasets: [
+      {
+        data: dataPoints.length > 0 ? dataPoints : [0],
+      },
+    ],
+  };
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.header}>Buyer Spending Summary (STUDENT)</Text>
+
+      <Text style={styles.header}>Buyer Spending</Text>
+
+      {/* Filter Label & Button */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Text style={{ fontSize: 12, color: '#B71C1C', backgroundColor: '#ffebee', paddingVertical: 4, paddingHorizontal: 8, borderRadius: 4, overflow: 'hidden' }}>
+            Filtered: {filter.label}
+          </Text>
+        </View>
+        <TouchableOpacity
+          onPress={() => setFilterModalVisible(true)}
+          style={{ backgroundColor: '#D32F2F', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 }}
+        >
+          <Text style={{ color: '#fff', fontWeight: '600', fontSize: 12 }}>Filter</Text>
+        </TouchableOpacity>
+      </View>
+
+      <MonthFilter
+        visible={filterModalVisible}
+        onClose={() => setFilterModalVisible(false)}
+        onApply={setFilter}
+        currentFilter={filter}
+      />
 
       <View style={[styles.card, styles.centerCard]}>
         <Text style={styles.cardTitle}>Total Spending</Text>
@@ -229,35 +323,11 @@ const BuyerSpendingSummary = ({ route, navigation }) => {
             >
               <Pressable onPress={() => setTooltip(prev => ({ ...prev, visible: false }))}>
                 <LineChart
-                  data={{
-                    labels: formattedTrend.map((t, index) => {
-                      if (index === 0 || formattedTrend[index - 1].month !== t.month) {
-                        return `${t.month}`;
-                      }
-                      return ``;
-                    }),
-                    datasets: [
-                      {
-                        data: formattedTrend.map(t => t.total),
-                      },
-                    ],
-                  }}
+                  data={chartData}
                   width={chartWidth}
                   height={220}
                   yAxisLabel="RM "
-                  chartConfig={{
-                    backgroundColor: '#fff',
-                    backgroundGradientFrom: '#fff',
-                    backgroundGradientTo: '#fff',
-                    decimalPlaces: 2,
-                    color: (opacity = 1) => `rgba(199,0,0,${opacity})`,
-                    labelColor: (opacity = 1) => `rgba(0,0,0,${opacity})`,
-                    propsForDots: {
-                      r: '4',
-                      strokeWidth: '2',
-                      stroke: '#c70000',
-                    },
-                  }}
+                  chartConfig={chartConfig}
                   bezier
                   style={{ marginVertical: 8, borderRadius: 16 }}
                   decorator={() =>
@@ -271,6 +341,7 @@ const BuyerSpendingSummary = ({ route, navigation }) => {
                           paddingHorizontal: 8,
                           paddingVertical: 4,
                           borderRadius: 6,
+                          zIndex: 999
                         }}
                       >
                         <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold', textAlign: 'center' }}>
@@ -283,15 +354,29 @@ const BuyerSpendingSummary = ({ route, navigation }) => {
                     ) : null
                   }
                   onDataPointClick={({ value, x, y, index }) => {
-                    const t = formattedTrend[index];
-                    const dateLabel = `${t.day} ${t.month} ${t.year}`;
+                    const t = trendData[index];
+                    const rawDate = t.date;
+                    const dStr = String(rawDate);
+                    let dateDisplay = dStr;
+
+                    // Same tooltip logic as SalesDashboard
+                    if (dStr.includes('-')) {
+                      const parts = dStr.split('-');
+                      if (parts.length === 3) {
+                        const d = new Date(parts[0], parts[1] - 1, parts[2]);
+                        dateDisplay = `${d.getDate()} ${d.toLocaleString('default', { month: 'short' })} ${d.getFullYear()}`;
+                      } else if (parts.length === 2) {
+                        const d = new Date(parts[0], parts[1] - 1);
+                        dateDisplay = `${d.toLocaleString('default', { month: 'long' })} ${parts[0]}`;
+                      }
+                    }
 
                     setTooltip({
                       visible: true,
                       x,
                       y,
                       value,
-                      date: dateLabel,
+                      date: dateDisplay,
                     });
                     // Auto-hide tooltip after 4 seconds
                     setTimeout(() => {

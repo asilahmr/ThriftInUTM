@@ -1,9 +1,10 @@
-import React from "react";
-import { View, Text, TouchableOpacity, ActivityIndicator, Platform } from "react-native";
+import React, { useLayoutEffect, useState } from "react";
+import { View, Text, TouchableOpacity, ActivityIndicator, Platform, Modal, StyleSheet } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Picker } from '@react-native-picker/picker';
-import { NavigationContainer } from "@react-navigation/native";
+import { NavigationContainer, useNavigation } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
+import Icon from 'react-native-vector-icons/Ionicons';
 
 import styles from "./styles";
 import SalesDashboard from "./SalesDashboard";
@@ -11,6 +12,8 @@ import BuyerSpendingSummary from "./BuyerSpendingSummary";
 import CategoryProducts from './CategoryProducts';
 import BuyerCategoryDetail from './BuyerCategoryDetail';
 import UserActivityDashboard from './UserActivityDashboard';
+import AdminPanel from './AdminPanel';
+import Chat from './Chat';
 import API_BASE from './config';
 
 const Stack = createStackNavigator();
@@ -55,14 +58,18 @@ function RoleSelectionScreen({ navigation }) {
 
       <TouchableOpacity
         style={styles.button}
-        onPress={() => navigation.navigate('DashboardMenu', { role: 'student', userId: selectedStudentId })}
+        onPress={() => {
+          const student = students.find(s => s.user_id === selectedStudentId);
+          const name = student ? student.name : 'Student';
+          navigation.navigate('DashboardMenu', { role: 'student', userId: selectedStudentId, name });
+        }}
       >
         <Text style={styles.buttonText}>Continue as Student</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={styles.button}
-        onPress={() => navigation.navigate('DashboardMenu', { role: 'admin' })}
+        onPress={() => navigation.navigate('DashboardMenu', { role: 'admin', name: 'Admin' })}
       >
         <Text style={styles.buttonText}>Continue as Admin</Text>
       </TouchableOpacity>
@@ -76,12 +83,58 @@ function RoleSelectionScreen({ navigation }) {
 
 // ---------------- Dashboard Menu ----------------
 function DashboardMenu({ route, navigation }) {
-  const { role, userId } = route.params;
+  const { role, userId, name } = route.params;
+  const [showLogout, setShowLogout] = useState(false);
+
+  // Custom Header
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerTitle: "ThriftIn UTM",
+      headerTintColor: "#c70000",
+      headerRight: () => (
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 15 }}>
+          <TouchableOpacity onPress={() => setShowLogout(!showLogout)}>
+            <Icon name="person-circle-outline" size={30} color="#c70000" />
+          </TouchableOpacity>
+        </View>
+      ),
+    });
+  }, [navigation, showLogout]);
+
+  const handleLogout = () => {
+    setShowLogout(false);
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'RoleSelection' }],
+    });
+  };
 
   return (
     <SafeAreaView style={styles.roleContainer}>
-      <Text style={styles.title}>Welcome, {role === 'student' ? 'Student' : 'Admin'}</Text>
+      {/* Logout Modal/Tooltip */}
+      {showLogout && (
+        <TouchableOpacity
+          style={{
+            position: 'absolute',
+            top: 10,
+            right: 10,
+            backgroundColor: 'white',
+            padding: 10,
+            borderRadius: 5,
+            elevation: 5,
+            zIndex: 100,
+            borderWidth: 1,
+            borderColor: '#eee'
+          }}
+          onPress={handleLogout}
+        >
+          <Text style={{ color: '#c70000', fontWeight: 'bold' }}>Log Out</Text>
+        </TouchableOpacity>
+      )}
 
+      <Text style={styles.title}>Welcome, {name}</Text>
+
+      {/* --- Common --- */}
       <TouchableOpacity
         style={styles.button}
         onPress={() => navigation.navigate('SalesDashboard', { role, userId })}
@@ -89,20 +142,40 @@ function DashboardMenu({ route, navigation }) {
         <Text style={styles.buttonText}>Go to Sales Dashboard</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => navigation.navigate('BuyerSpendingSummary', { role, userId })}
-      >
-        <Text style={styles.buttonText}>Go to Buyer Spending Summary</Text>
-      </TouchableOpacity>
-
-      {role === 'admin' && (
+      {/* --- Student Only --- */}
+      {role === 'student' && (
         <TouchableOpacity
           style={styles.button}
-          onPress={() => navigation.navigate('UserActivityDashboard')}
+          onPress={() => navigation.navigate('BuyerSpendingSummary', { role, userId })}
         >
-          <Text style={styles.buttonText}>Go to User Activity Dashboard</Text>
+          <Text style={styles.buttonText}>Go to Buyer Spending Summary</Text>
         </TouchableOpacity>
+      )}
+
+      {/* --- Admin Only --- */}
+      {role === 'admin' && (
+        <>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => navigation.navigate('UserActivityDashboard')}
+          >
+            <Text style={styles.buttonText}>Go to User Activity Dashboard</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => navigation.navigate('AdminPanel')}
+          >
+            <Text style={styles.buttonText}>Go to Admin Panel</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => navigation.navigate('Chat')}
+          >
+            <Text style={styles.buttonText}>Go to Chat</Text>
+          </TouchableOpacity>
+        </>
       )}
     </SafeAreaView>
   );
@@ -122,7 +195,7 @@ export default function App() {
         <Stack.Screen
           name="DashboardMenu"
           component={DashboardMenu}
-          options={{ title: 'Dashboard', headerTintColor: '#c70000' }}
+        // Header options set in component
         />
 
         <Stack.Screen
@@ -151,6 +224,18 @@ export default function App() {
           name="UserActivityDashboard"
           component={UserActivityDashboard}
           options={{ title: 'User Activity', headerTintColor: '#c70000' }}
+        />
+
+        <Stack.Screen
+          name="AdminPanel"
+          component={AdminPanel}
+          options={{ title: 'Admin Panel', headerTintColor: '#c70000' }}
+        />
+
+        <Stack.Screen
+          name="Chat"
+          component={Chat}
+          options={{ title: 'Chat', headerTintColor: '#c70000' }}
         />
       </Stack.Navigator>
     </NavigationContainer>
