@@ -21,7 +21,9 @@ A project of Application Development that allow selling and buying preloved or u
 **Developer: ASILAH BINT MOHD RAZAK**
 | Sprint | Module Name | Frontend | Backend |
 |--------|--------------|----------|---------|
-| 1 | User Activity Dashboard Module |
+| 1 | User Activity Dashboard Module | Screens:<br>• [UserActivityDashboardScreen.js](frontend/src/screens/analytics/UserActivityDashboardScreen.js)<br>Components:<br>• [ActivityChart.js](frontend/src/components/analytics/ActivityChart.js)<br>Services:<br>• [analyticsService.js](frontend/src/services/analyticsService.js) | Controllers:<br>• [analyticsController.js](backend/controllers/analyticsController.js)<br>Routes:<br>• [analytics.js](backend/routes/analytics.js)<br>Utils:<br>• [analyticsHelper.js](backend/utils/analyticsHelper.js) |
+| 2 | Sales and Performance Module | Screens:<br>• [SalesPerformanceScreen.js](frontend/src/screens/analytics/SalesPerformanceScreen.js)<br>Components:<br>• [PerformanceChart.js](frontend/src/components/analytics/PerformanceChart.js)<br>Services:<br>• [analyticsService.js](frontend/src/services/analyticsService.js) | Controllers:<br>• [analyticsController.js](backend/controllers/analyticsController.js)<br>Routes:<br>• [analytics.js](backend/routes/analytics.js)<br>Utils:<br>• [analyticsHelper.js](backend/utils/analyticsHelper.js) |
+| 3 | Buyer Spending Summary Module | Screens:<br>• [BuyerSpendingSummaryScreen.js](frontend/src/screens/analytics/BuyerSpendingSummaryScreen.js)<br>Components:<br>• [SpendingChart.js](frontend/src/components/analytics/SpendingChart.js)<br>Services:<br>• [analyticsService.js](frontend/src/services/analyticsService.js) | Controllers:<br>• [analyticsController.js](backend/controllers/analyticsController.js)<br>Routes:<br>• [analytics.js](backend/routes/analytics.js)<br>Utils:<br>• [analyticsHelper.js](backend/utils/analyticsHelper.js) |
 
 ## Communication & Support Subsystem
 **Developer: TAN JIA YING**
