@@ -19,7 +19,7 @@ A project of Application Development that allow selling and buying preloved or u
 **Developer: ASILAH BINT MOHD RAZAK**
 | Sprint | Module Name | Frontend | Backend |
 |--------|--------------|----------|---------|
-| 1 | User Activity Dashboard Module |
+| 1 | User Activity Dashboard Module | Screens:<br>• [UserActivityDashboard.js](https://github.com/asilahmr/ThriftInUTM/blob/User-Activity-Dashboard-Module/thriftin-utm/UserActivityDashboard.js)<br>• [MonthFilter.js](https://github.com/asilahmr/ThriftInUTM/blob/User-Activity-Dashboard-Module/thriftin-utm/MonthFilter.js)| Server:<br>• [server.js](| Server:<br>• [server.js](https://github.com/asilahmr/ThriftInUTM/blob/User-Activity-Dashboard-Module/thriftin-utm/backend-v2/server.js)
 
 ## Communication & Support Subsystem
 **Developer: TAN JIA YING**
