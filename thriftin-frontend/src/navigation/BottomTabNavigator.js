@@ -9,6 +9,7 @@ import HomeScreen from '../screens/HomeScreen';
 import AddProductScreen from '../screens/AddProductScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import MyWalletScreen from '../screens/MyWalletScreen';
+// Import screens
 
 const Tab = createBottomTabNavigator();
 
