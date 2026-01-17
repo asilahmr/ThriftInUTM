@@ -6,7 +6,7 @@ class WalletController {
   // Get wallet balance
   static async getWalletBalance(req, res) {
     try {
-      const userId = req.user.user_id;
+      const userId = req.user.id;
 
       console.log(`💰 Fetching wallet balance for user ${userId}`);
 
@@ -35,7 +35,7 @@ class WalletController {
   // Get wallet summary (balance + statistics)
   static async getWalletSummary(req, res) {
     try {
-      const userId = req.user.user_id;
+      const userId = req.user.id;
 
       console.log(`📊 Fetching wallet summary for user ${userId}`);
 
@@ -59,7 +59,7 @@ class WalletController {
   // Top up wallet
   static async topUpWallet(req, res) {
     try {
-      const userId = req.user.user_id;
+      const userId = req.user.id;
       const { amount, topUpMethod } = req.body;
 
       console.log(`💳 Top-up request: User ${userId}, Amount: RM ${amount}, Method: ${topUpMethod}`);
@@ -128,7 +128,7 @@ class WalletController {
   // Get transaction history
   static async getTransactionHistory(req, res) {
     try {
-      const userId = req.user.user_id;
+      const userId = req.user.id;
       const limit = parseInt(req.query.limit) || 50;
       const offset = parseInt(req.query.offset) || 0;
 
@@ -155,7 +155,7 @@ class WalletController {
   // Check sufficient balance
   static async checkSufficientBalance(req, res) {
     try {
-      const userId = req.user.user_id;
+      const userId = req.user.id;
       const { amount } = req.query;
 
       if (!amount || isNaN(amount)) {
@@ -191,7 +191,7 @@ class WalletController {
   // Get transaction statistics
   static async getTransactionStats(req, res) {
     try {
-      const userId = req.user.user_id;
+      const userId = req.user.id;
 
       console.log(`📊 Fetching transaction stats for user ${userId}`);
 

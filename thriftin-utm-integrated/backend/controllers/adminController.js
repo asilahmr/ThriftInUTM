@@ -2,7 +2,7 @@ const db = require('../config/db');
 
 exports.getFlaggedSubmissions = async (req, res) => {
   try {
-    const [submissions] = await db.query(
+    const submissions = await db.query(
       `SELECT 
         vs.id,
         vs.user_id,
@@ -34,9 +34,9 @@ exports.getFlaggedSubmissions = async (req, res) => {
 
   } catch (error) {
     console.error('Get flagged submissions error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: 'Failed to get submissions' 
+      message: 'Failed to get submissions'
     });
   }
 };
@@ -46,7 +46,7 @@ exports.approveSubmission = async (req, res) => {
     const { id } = req.params;
     const adminId = req.user.id;
 
-    const [submissions] = await db.query(
+    const submissions = await db.query(
       'SELECT user_id FROM verification_submissions WHERE id = ?',
       [id]
     );
@@ -95,7 +95,7 @@ exports.rejectSubmission = async (req, res) => {
     const { id } = req.params;
     const adminId = req.user.id;
 
-    const [submissions] = await db.query(
+    const submissions = await db.query(
       'SELECT user_id, reason FROM verification_submissions WHERE id = ?',
       [id]
     );
@@ -174,21 +174,21 @@ exports.flagSubmission = async (req, res) => {
 exports.getAllSubmissions = async (req, res) => {
   try {
     const { status, search, limit = 50, offset = 0 } = req.query;
-    
+
     let whereClause = "vs.status IN ('verified', 'rejected')";
     const params = [];
-   
+
     if (status && status !== 'all') {
       whereClause += ' AND vs.status = ?';
       params.push(status);
     }
-    
+
     if (search) {
       whereClause += ' AND (s.matric LIKE ? OR u.email LIKE ? OR s.name LIKE ?)';
       params.push(`%${search}%`, `%${search}%`, `%${search}%`);
     }
-    
-    const [submissions] = await db.query(
+
+    const submissions = await db.query(
       `SELECT 
         vs.id,
         vs.user_id,
@@ -223,13 +223,13 @@ exports.getAllSubmissions = async (req, res) => {
       [...params, parseInt(limit), parseInt(offset)]
     );
 
-    let statsWhereClause = status && status !== 'all' 
-      ? 'status = ?' 
+    let statsWhereClause = status && status !== 'all'
+      ? 'status = ?'
       : "status IN ('verified', 'rejected')";
-    
+
     let statsParams = status && status !== 'all' ? [status] : [];
 
-    const [stats] = await db.query(
+    const stats = await db.query(
       `SELECT 
         COUNT(*) as total,
         SUM(CASE WHEN status = 'verified' THEN 1 ELSE 0 END) as verified,
@@ -246,7 +246,7 @@ exports.getAllSubmissions = async (req, res) => {
         total: parseInt(stats[0].total) || 0,
         verified: parseInt(stats[0].verified) || 0,
         rejected: parseInt(stats[0].rejected) || 0,
-    },
+      },
       pagination: {
         limit: parseInt(limit),
         offset: parseInt(offset),
@@ -267,8 +267,8 @@ exports.getAllSubmissions = async (req, res) => {
 exports.getStudentHistory = async (req, res) => {
   try {
     const { userId } = req.params;
-    
-    const [history] = await db.query(
+
+    const history = await db.query(
       `SELECT 
         vs.id,
         vs.file_path,

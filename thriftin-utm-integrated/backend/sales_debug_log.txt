@@ -1,0 +1,12 @@
+✅ Connected with ENV password
+
+=== 1. FINDING USERS WITH SALES ===
+Found 4 sellers.
+- User ID: 13, Items Sold: 2
+- User ID: 20, Items Sold: 2
+- User ID: 21, Items Sold: 1
+- User ID: 22, Items Sold: 2
+
+=== 2. ANALYZING ORDERS FOR TOP SELLER ===
+Checking details for Seller ID: 13
+ERROR: Unknown column 'o.created_at' in 'field list'

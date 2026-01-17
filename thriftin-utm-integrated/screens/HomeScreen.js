@@ -2,7 +2,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity,
-  TextInput, ActivityIndicator, RefreshControl, ScrollView, Image
+  TextInput, ActivityIndicator, RefreshControl, ScrollView, Image, Dimensions
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { marketplaceApi } from '../api/productApi';
@@ -26,10 +26,12 @@ const HomeScreen = ({ navigation }) => {
 
   const fetchProducts = async () => {
     try {
+      console.log('Fetching products...');
       const response = await marketplaceApi.getAllProducts();
-      setProducts(response.data || []);
+      console.log('Products API Response:', JSON.stringify(response.data));
+      setProducts(response.data.data || []);
     } catch (error) {
-      console.error(error);
+      console.error('Fetch products error:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -39,7 +41,7 @@ const HomeScreen = ({ navigation }) => {
   const fetchRecommendations = async () => {
     try {
       const response = await marketplaceApi.getRecommendations(5);
-      setRecommendations(response.data || []);
+      setRecommendations(response.data.data || []);
     } catch {
       setRecommendations([]);
     }
@@ -53,7 +55,7 @@ const HomeScreen = ({ navigation }) => {
     setLoading(true);
     try {
       const response = await marketplaceApi.searchProducts(searchQuery);
-      setProducts(response.data || []);
+      setProducts(response.data.data || []);
     } finally {
       setLoading(false);
     }
@@ -67,7 +69,7 @@ const HomeScreen = ({ navigation }) => {
         await fetchProducts();
       } else {
         const response = await marketplaceApi.getProductsByCategory(category);
-        setProducts(response.data || []);
+        setProducts(response.data.data || []);
       }
     } finally {
       setLoading(false);
@@ -139,12 +141,14 @@ const HomeScreen = ({ navigation }) => {
       >
         <TouchableOpacity style={styles.recommendationCard}>
           <Image source={{ uri: imageUrl }} style={styles.recommendationImage} />
-          <Text style={styles.recommendationName} numberOfLines={2}>
-            {item.name}
-          </Text>
-          <Text style={styles.recommendationPrice}>
-            RM {parseFloat(item.price).toFixed(2)}
-          </Text>
+          <View style={styles.recommendationInfo}>
+            <Text style={styles.recommendationName} numberOfLines={2}>
+              {item.name}
+            </Text>
+            <Text style={styles.recommendationPrice}>
+              RM {parseFloat(item.price).toFixed(2)}
+            </Text>
+          </View>
         </TouchableOpacity>
       </TransactionGuard>
     );
@@ -250,6 +254,7 @@ const HomeScreen = ({ navigation }) => {
         renderItem={renderProductCard}
         keyExtractor={item => item.product_id.toString()}
         numColumns={2}
+        columnWrapperStyle={styles.columnWrapper}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -262,10 +267,18 @@ const HomeScreen = ({ navigation }) => {
   );
 };
 
+const { width } = Dimensions.get('window');
+const CARD_MARGIN = 6;
+const CARD_WIDTH = (width / 2) - (CARD_MARGIN * 3);
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  columnWrapper: {
+    justifyContent: 'flex-start', // specific alignment
+    paddingHorizontal: 6,
   },
   centered: {
     flex: 1,
@@ -350,7 +363,7 @@ const styles = StyleSheet.create({
   },
   recommendationsSection: {
     marginTop: 8,
-    marginBottom: 8,
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
@@ -365,10 +378,12 @@ const styles = StyleSheet.create({
   },
   recommendationCard: {
     width: 140,
+    height: 250, // Slightly increased height
     backgroundColor: COLORS.card,
     borderRadius: 12,
     overflow: 'hidden',
     marginRight: 12,
+    marginLeft: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -379,29 +394,34 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 140,
     backgroundColor: COLORS.background,
+    resizeMode: 'cover',
+  },
+  recommendationInfo: {
+    padding: 10,
+    flex: 1,
+    justifyContent: 'space-between',
   },
   recommendationName: {
     fontSize: 14,
     fontWeight: '600',
     color: COLORS.text,
-    padding: 8,
-    paddingBottom: 4,
+    marginBottom: 4,
   },
   recommendationPrice: {
     fontSize: 16,
     fontWeight: 'bold',
     color: COLORS.primary,
-    paddingHorizontal: 8,
-    paddingBottom: 8,
   },
   productsList: {
     padding: 16,
   },
   productCard: {
-    flex: 1,
+    width: CARD_WIDTH, // Fixed width based on screen
+    height: 290, // Strict fixed height
     backgroundColor: COLORS.card,
     borderRadius: 12,
-    margin: 4,
+    margin: CARD_MARGIN,
+    marginBottom: 12,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -413,27 +433,30 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 160,
     backgroundColor: COLORS.background,
+    resizeMode: 'cover',
   },
   productInfo: {
-    padding: 12,
+    padding: 10,
+    flex: 1,
+    justifyContent: 'space-between', // Distribute space evenly
   },
   productName: {
     fontSize: 14,
     fontWeight: '600',
     color: COLORS.text,
     marginBottom: 4,
-    minHeight: 36,
+    height: 40,
   },
   productCategory: {
     fontSize: 12,
     color: COLORS.textSecondary,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   productPrice: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: COLORS.primary,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   productCondition: {
     fontSize: 12,

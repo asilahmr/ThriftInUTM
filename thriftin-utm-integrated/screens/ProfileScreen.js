@@ -117,6 +117,7 @@ const ProfileScreen = ({ navigation }) => {
     { id: 'details', title: 'My Details', icon: 'person-outline', iconFamily: 'Ionicons', screen: 'Details' },
     { id: 'verification', title: 'Verification', icon: 'shield-checkmark-outline', iconFamily: 'Ionicons', screen: 'Verification', showStatus: true },
     { id: 'my_items', title: 'My Items', icon: 'list-circle-outline', iconFamily: 'Ionicons', screen: 'MyItems' },
+    { id: 'my_orders', title: 'My Orders', icon: 'cart-outline', iconFamily: 'Ionicons', screen: 'OrderHistory' },
     { id: 'sales_performance', title: 'Sales Performance', icon: 'trending-up', iconFamily: 'Ionicons', screen: 'SalesDashboard' },
     { id: 'spending_summary', title: 'Spending Summary', icon: 'wallet-outline', iconFamily: 'Ionicons', screen: 'BuyerSpendingSummary' }
   ];

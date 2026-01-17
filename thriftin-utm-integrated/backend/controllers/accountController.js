@@ -5,7 +5,7 @@ const checkUserRestrictions = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const [users] = await db.query(
+    const users = await db.query(
       `SELECT u.id, u.email, u.user_type, 
               s.verification_status, s.email_verified, s.account_status
        FROM user u
@@ -40,7 +40,7 @@ const checkUserRestrictions = async (req, res) => {
     }
 
     if (user.account_status === 'restricted') {
-      const [reports] = await db.query(
+      const reports = await db.query(
         `SELECT COUNT(*) as report_count 
          FROM user_reports 
          WHERE reported_user_id = ?`,
@@ -105,16 +105,16 @@ const checkUserRestrictions = async (req, res) => {
 // ============================================
 const submitUserReport = async (req, res) => {
   const connection = await db.getConnection();
-  
+
   try {
     await connection.beginTransaction();
-    
-    const { 
-      reportedUserId, 
-      reason, 
+
+    const {
+      reportedUserId,
+      reason,
       description,
       evidencePath,
-      evidenceType 
+      evidenceType
     } = req.body;
     const reporterId = req.user.id;
 
@@ -188,9 +188,9 @@ const submitUserReport = async (req, res) => {
   } catch (error) {
     await connection.rollback();
     console.error('❌ Submit report error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to submit report',
-      message: error.message 
+      message: error.message
     });
   } finally {
     connection.release();
@@ -204,7 +204,7 @@ const suspendUserTemporarily = async (req, res) => {
     console.log('\n=== SUSPEND TEMPORARILY ===');
     console.log('User ID to suspend:', userId);
 
-    const [users] = await db.query(
+    const users = await db.query(
       'SELECT account_status FROM students WHERE user_id = ?',
       [userId]
     );
@@ -245,7 +245,7 @@ const suspendUserPermanently = async (req, res) => {
     console.log('\n=== SUSPEND PERMANENTLY ===');
     console.log('User ID to ban:', userId);
 
-    const [users] = await db.query(
+    const users = await db.query(
       'SELECT account_status FROM students WHERE user_id = ?',
       [userId]
     );
@@ -282,7 +282,7 @@ const reinstateUser = async (req, res) => {
     console.log('\n=== REINSTATE USER ===');
     console.log('User ID to reinstate:', userId);
 
-    const [users] = await db.query(
+    const users = await db.query(
       'SELECT account_status FROM students WHERE user_id = ?',
       [userId]
     );
@@ -296,7 +296,7 @@ const reinstateUser = async (req, res) => {
 
     // Allow reinstate for 'suspended' AND 'restricted'
     if (currentStatus !== 'suspended' && currentStatus !== 'restricted') {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: `Cannot reinstate. Current status: ${currentStatus}`
       });
     }
@@ -325,7 +325,7 @@ const reinstateUser = async (req, res) => {
 const getAllUsers = async (req, res) => {
   try {
     console.log('\n=== GET ALL USERS ===');
-    
+
     const query = `
       SELECT 
         u.id, 
@@ -353,7 +353,7 @@ const getAllUsers = async (req, res) => {
         COALESCE(last_reported, u.id) DESC
     `;
 
-    const [users] = await db.query(query);
+    const users = await db.query(query);
     console.log(`Found ${users.length} total users`);
 
     const formattedUsers = users.map(u => ({
@@ -381,9 +381,9 @@ const getAllUsers = async (req, res) => {
   } catch (error) {
     console.error('❌ Get users error:', error);
     console.error('Error message:', error.message);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to load users',
-      message: error.message 
+      message: error.message
     });
   }
 };
@@ -395,7 +395,7 @@ const getUserDetails = async (req, res) => {
     console.log('\n=== GET USER DETAILS ===');
     console.log('User ID:', userId);
 
-    const [users] = await db.query(
+    const users = await db.query(
       `SELECT u.id, u.email, u.user_type, u.created_at,
               s.name, s.matric, s.account_status, s.email_verified,
               s.verification_status, s.phone, s.address
@@ -431,7 +431,7 @@ const getUserReports = async (req, res) => {
     console.log('User ID:', userId);
 
     // First check if user exists
-    const [userCheck] = await db.query(
+    const userCheck = await db.query(
       'SELECT id FROM user WHERE id = ?',
       [userId]
     );
@@ -441,7 +441,7 @@ const getUserReports = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const [reports] = await db.query(
+    const reports = await db.query(
       `SELECT r.*, 
               reporter.email as reporterEmail,
               s.name as reporterName,
@@ -494,16 +494,16 @@ const getUserReports = async (req, res) => {
     console.log(`Returning ${formattedReports.length} formatted reports`);
     console.log('=== END GET USER REPORTS ===\n');
 
-    res.json({ 
+    res.json({
       reports: formattedReports,
       total: formattedReports.length
     });
   } catch (error) {
     console.error('❌ Get user reports error:', error);
     console.error('Error details:', error.message);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to load reports',
-      message: error.message 
+      message: error.message
     });
   }
 };
@@ -512,7 +512,7 @@ const getReportDetails = async (req, res) => {
   try {
     const { reportId } = req.params;
 
-    const [reports] = await db.query(
+    const reports = await db.query(
       `SELECT r.*, 
               reporter.email as reporter_email,
               reported.email as reported_email,

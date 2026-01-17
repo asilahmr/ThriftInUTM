@@ -494,7 +494,9 @@ app.post("/api/auth/login", async (req, res) => {
         {
           id: user.id,
           email: user.email,
-          userType: user.user_type
+          userType: user.user_type,
+          email_verified: user.email_verified,
+          is_verified: user.verification_status === 'verified' // Add this for redundancy if needed
         },
         JWT_SECRET,
         { expiresIn: '1h' }

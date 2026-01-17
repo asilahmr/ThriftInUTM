@@ -35,7 +35,7 @@ const authenticate = (req, res, next) => {
 
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
-    req.userId = decoded.userId;
+    req.userId = decoded.id;
 
     if (DEBUG_LOG) {
       console.log('✓ Token decoded successfully');
@@ -60,7 +60,7 @@ const optionalAuth = (req, res, next) => {
     if (token) {
       const decoded = jwt.verify(token, JWT_SECRET);
       req.user = decoded;
-      req.userId = decoded.userId;
+      req.userId = decoded.id;
     }
     next();
   } catch (error) {

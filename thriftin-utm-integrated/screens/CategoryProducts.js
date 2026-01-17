@@ -1,9 +1,10 @@
 // CategoryProducts.js
 import React, { useEffect, useState, useLayoutEffect } from 'react';
 import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
-import axios from 'axios';
+import api from '../utils/api';
+// import axios from 'axios'; // REMOVED
 import styles from './styles/styles';
-import API_BASE from '../config';
+// import API_BASE from '../config'; // REMOVED
 
 export default function CategoryProducts({ route, navigation }) {
   const { userId, category } = route.params;
@@ -21,9 +22,10 @@ export default function CategoryProducts({ route, navigation }) {
   const fetchCategoryProducts = async () => {
     try {
       const url = userId
-        ? `${API_BASE}/api/sales/user/${userId}/category/${category}`
-        : `${API_BASE}/api/sales/category/${category}`;
-      const response = await axios.get(url);
+        ? `/api/sales/user/${userId}/category/${category}`
+        : `/api/sales/category/${category}`;
+      // Use api.get instead of axios.get
+      const response = await api.get(url);
       setProducts(response.data);
       setLoading(false);
     } catch (err) {

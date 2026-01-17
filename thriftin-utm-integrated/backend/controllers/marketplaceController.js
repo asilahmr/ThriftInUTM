@@ -6,7 +6,7 @@ class MarketplaceController {
   // Get all marketplace products
   static async getAllProducts(req, res) {
     try {
-      const userId = req.user.user_id;
+      const userId = req.user.id;
       const limit = parseInt(req.query.limit) || 50;
       const offset = parseInt(req.query.offset) || 0;
 
@@ -31,7 +31,7 @@ class MarketplaceController {
   //  Search products
   static async searchProducts(req, res) {
     try {
-      const userId = req.user.user_id;
+      const userId = req.user.id;
       const searchQuery = req.query.q;
 
       if (!searchQuery || searchQuery.trim().length === 0) {
@@ -66,7 +66,7 @@ class MarketplaceController {
   // Filter by category
   static async getProductsByCategory(req, res) {
     try {
-      const userId = req.user.user_id;
+      const userId = req.user.id;
       const category = req.params.category;
 
       const validCategories = ['Books', 'Electronics', 'Fashion', 'Furniture', 'Others'];
@@ -99,7 +99,7 @@ class MarketplaceController {
   // Get product details
   static async getProductDetails(req, res) {
     try {
-      const userId = req.user.user_id;
+      const userId = req.user.id;
       const productId = req.params.id;
 
       const product = await MarketplaceModel.getProductDetails(productId);
@@ -135,7 +135,7 @@ class MarketplaceController {
   // Get AI recommendations
   static async getRecommendations(req, res) {
     try {
-      const userId = req.user.user_id;
+      const userId = req.user.id;
       const limit = parseInt(req.query.limit) || 10;
 
       const products = await MarketplaceModel.getRecommendations(userId, limit);
@@ -160,7 +160,7 @@ class MarketplaceController {
   // Get category statistics
   static async getCategoryStats(req, res) {
     try {
-      const userId = req.user.user_id;
+      const userId = req.user.id;
       const stats = await MarketplaceModel.getCategoryStats(userId);
 
       res.status(200).json({

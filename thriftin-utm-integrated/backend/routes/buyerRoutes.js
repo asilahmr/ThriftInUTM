@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
+const { authenticate, requireAdmin } = require('../middleware/authMiddleWare');
 
 // Helper to build date filter clause
 // Now accepts { month, year, type } object directly for clarity
-const buildDateFilter = (query, dateColumn = 'created_at') => {
+const buildDateFilter = (query, dateColumn = 'order_date') => {
     const { month, year, type } = query;
     let clause = '';
     const params = [];
@@ -25,13 +26,25 @@ const buildDateFilter = (query, dateColumn = 'created_at') => {
     return { clause, params };
 };
 
+// Apply authentication to all routes
+router.use(authenticate);
+
 // Student buyer summary
 router.get('/user/:userId', async (req, res) => {
-    const userId = req.params.userId;
+    const requestedUserId = parseInt(req.params.userId);
+    const authenticatedUserId = req.user.id;
+    const isAdmin = req.user.userType === 'admin';
+
+    // Security check
+    if (!isAdmin && requestedUserId !== authenticatedUserId) {
+        return res.status(403).json({ message: "Unauthorized access to other user's data" });
+    }
+
+    const userId = requestedUserId;
     const { month, year, type } = req.query;
 
-    const filter = buildDateFilter(req.query, 'created_at'); // for orders table
-    const itemFilter = buildDateFilter(req.query, 'o.created_at'); // for joined tables
+    const filter = buildDateFilter(req.query, 'order_date'); // for orders table
+    const itemFilter = buildDateFilter(req.query, 'o.order_date'); // for joined tables
 
     try {
         // Total spending
@@ -40,7 +53,7 @@ router.get('/user/:userId', async (req, res) => {
 
         // Top categories
         const catQuery = `
-            SELECT p.category, SUM(oi.snapshot_price) AS totalSpent, COUNT(*) AS itemsBought
+            SELECT p.category, SUM(oi.product_price) AS totalSpent, COUNT(*) AS itemsBought
             FROM order_items oi
             JOIN orders o ON oi.order_id = o.order_id
             JOIN products p ON oi.product_id = p.product_id
@@ -57,19 +70,19 @@ router.get('/user/:userId', async (req, res) => {
             dateFormat = '%Y-%m-%d';
         } else {
             const [rangeResult] = await db.query(
-                `SELECT DATEDIFF(MAX(created_at), MIN(created_at)) as diff_days 
+                `SELECT DATEDIFF(MAX(order_date), MIN(order_date)) as diff_days 
                  FROM orders
                  WHERE buyer_id = ? AND order_status = 'completed'`,
                 [userId]
             );
-            const diffDays = rangeResult[0].diff_days || 0;
+            const diffDays = rangeResult[0]?.diff_days || 0;
             if (diffDays > 365) dateFormat = '%Y';
             else if (diffDays > 180) dateFormat = '%Y-%m';
             else dateFormat = '%Y-%m-%d';
         }
 
         const trendQuery = `
-            SELECT DATE_FORMAT(created_at, '${dateFormat}') AS date, SUM(total_amount) AS total
+            SELECT DATE_FORMAT(order_date, '${dateFormat}') AS date, SUM(total_amount) AS total
             FROM orders
             WHERE buyer_id = ? AND order_status = 'completed' ${filter.clause}
             GROUP BY date
@@ -78,8 +91,8 @@ router.get('/user/:userId', async (req, res) => {
         const [trendResult] = await db.query(trendQuery, [userId, ...filter.params]);
 
         res.json({
-            totalSpending: totalResult[0].total_spending,
-            totalItems: totalResult[0].total_items,
+            totalSpending: totalResult[0]?.total_spending || 0,
+            totalItems: totalResult[0]?.total_items || 0,
             topCategories: categoriesResult,
             trend: trendResult
         });
@@ -89,13 +102,12 @@ router.get('/user/:userId', async (req, res) => {
 });
 
 // Admin buyer summary (global)
-router.get('/admin', async (req, res) => {
+router.get('/admin', requireAdmin, async (req, res) => {
     const { month, year, type } = req.query;
     console.log('Admin Buyer Query Params:', { month, year, type });
 
-    const filter = buildDateFilter(req.query, 'created_at');
-    const itemFilter = buildDateFilter(req.query, 'o.created_at');
-    console.log('Admin Buyer Clauses:', { filter: filter.clause, itemFilter: itemFilter.clause });
+    const filter = buildDateFilter(req.query, 'order_date');
+    const itemFilter = buildDateFilter(req.query, 'o.order_date');
 
     try {
         // Total spending
@@ -112,7 +124,7 @@ router.get('/admin', async (req, res) => {
 
         // Top categories
         const catQuery = `
-            SELECT p.category, SUM(oi.snapshot_price) AS totalSpent, COUNT(*) AS itemsBought
+            SELECT p.category, SUM(oi.product_price) AS totalSpent, COUNT(*) AS itemsBought
             FROM order_items oi
             JOIN orders o ON oi.order_id = o.order_id
             JOIN products p ON oi.product_id = p.product_id
@@ -128,18 +140,18 @@ router.get('/admin', async (req, res) => {
             dateFormat = '%Y-%m-%d';
         } else {
             const [rangeResult] = await db.query(
-                `SELECT DATEDIFF(MAX(created_at), MIN(created_at)) as diff_days 
+                `SELECT DATEDIFF(MAX(order_date), MIN(order_date)) as diff_days 
                  FROM orders
                  WHERE order_status = 'completed'`
             );
-            const diffDays = rangeResult[0].diff_days || 0;
+            const diffDays = rangeResult[0]?.diff_days || 0;
             if (diffDays > 365) dateFormat = '%Y';
             else if (diffDays > 180) dateFormat = '%Y-%m';
             else dateFormat = '%Y-%m-%d';
         }
 
         const trendQuery = `
-            SELECT DATE_FORMAT(created_at, '${dateFormat}') AS date, SUM(total_amount) AS total
+            SELECT DATE_FORMAT(order_date, '${dateFormat}') AS date, SUM(total_amount) AS total
             FROM orders
             WHERE order_status = 'completed' ${filter.clause}
             GROUP BY date
@@ -147,14 +159,13 @@ router.get('/admin', async (req, res) => {
         `;
         const [trendResult] = await db.query(trendQuery, filter.params);
 
-        // Top buyers - THIS IS THE REPORTED ISSUE
-        // Explicitly check logic here.
-        // itemFilter uses o.created_at.
+        // Top buyers
         const buyersQuery = `
-            SELECT u.name, SUM(oi.snapshot_price) AS totalSpent, COUNT(*) AS itemsBought
+            SELECT s.name, SUM(oi.snapshot_price) AS totalSpent, COUNT(*) AS itemsBought
             FROM orders o
             JOIN order_items oi ON o.order_id = oi.order_id
-            JOIN users u ON o.buyer_id = u.user_id
+            JOIN user u ON o.buyer_id = u.id
+            LEFT JOIN students s ON u.id = s.user_id
             WHERE o.order_status = 'completed' ${itemFilter.clause}
             GROUP BY o.buyer_id
             ORDER BY totalSpent DESC
@@ -163,8 +174,8 @@ router.get('/admin', async (req, res) => {
         const [topBuyersResult] = await db.query(buyersQuery, itemFilter.params);
 
         res.json({
-            totalSpending: totalResult[0].total_spending,
-            totalItems: totalItemsResult[0].total_items,
+            totalSpending: totalResult[0]?.total_spending || 0,
+            totalItems: totalItemsResult[0]?.total_items || 0,
             topCategories: categoriesResult,
             trend: trendResult,
             topBuyers: topBuyersResult
@@ -177,16 +188,26 @@ router.get('/admin', async (req, res) => {
 
 // Buyer items by category (student)
 router.get('/user/:userId/category/:category', async (req, res) => {
-    const { userId, category } = req.params;
+    const requestedUserId = parseInt(req.params.userId);
+    const authenticatedUserId = req.user.id;
+    const isAdmin = req.user.userType === 'admin';
+
+    // Security check
+    if (!isAdmin && requestedUserId !== authenticatedUserId) {
+        return res.status(403).json({ message: "Unauthorized access to other user's data" });
+    }
+
+    const { category } = req.params;
+    const userId = requestedUserId;
 
     try {
         const [results] = await db.query(
-            `SELECT p.name, oi.snapshot_price AS amount, o.created_at AS sold_at
+            `SELECT p.name, oi.snapshot_price AS amount, o.order_date AS sold_at
           FROM order_items oi
           JOIN orders o ON oi.order_id = o.order_id
           JOIN products p ON oi.product_id = p.product_id
           WHERE o.buyer_id = ? AND p.category = ? AND o.order_status = 'completed'
-          ORDER BY o.created_at DESC`,
+          ORDER BY o.order_date DESC`,
             [userId, category]
         );
 

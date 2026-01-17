@@ -60,6 +60,7 @@ export default function SalesDashboard({ route, navigation }) {
       const salesUrl = role === 'admin'
         ? `/api/sales/admin`
         : `/api/sales/user/${userId}`;
+
       // Use api.get instead of axios.get
       const salesResponse = await api.get(salesUrl, { params });
 
