@@ -2,12 +2,14 @@ const db = require('../config/db');
 
 
 exports.getActivityAnalytics = async (req, res) => {
+  console.log('GET /api/analytics/activity hit');
   try {
     // 1. Total registered students
     const usersCountResult = await db.query(
       "SELECT COUNT(*) AS count FROM user WHERE user_type = 'student'"
     );
-    const totalUsers = usersCountResult[0].count;
+    const totalUsers = (usersCountResult && usersCountResult[0]) ? usersCountResult[0].count : 0;
+    console.log('Analytics Loaded. Total Users:', totalUsers);
 
     // 2. Activity data (using orders as activity)
     const activitiesResult = await db.query(`

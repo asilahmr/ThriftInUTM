@@ -201,7 +201,7 @@ export default function UserActivityDashboard() {
 
   // Fetch Data
   React.useEffect(() => {
-    fetch(`${API_BASE}/api/analytics/activity`)
+    fetch(`${API_BASE.API_URL}/api/analytics/activity`)
       .then(res => res.json())
       .then(data => {
         const activities = data.activities || [];
@@ -310,18 +310,23 @@ export default function UserActivityDashboard() {
 
   const degreeDistribution = useMemo(() => {
     const counts = {};
+    let total = 0;
     filteredDemographics.forEach(u => {
       const d = u.degree_type || 'Unknown';
       counts[d] = (counts[d] || 0) + 1;
+      total++;
     });
     return Object.keys(counts).map(key => ({
       name: key,
       population: counts[key],
       color: getColorForLabel(key),
       legendFontColor: "#7F7F7F",
-      legendFontSize: 12
+      legendFontSize: 12,
+      percent: total > 0 ? ((counts[key] / total) * 100).toFixed(1) : 0
     }));
   }, [filteredDemographics]);
+
+  const [degreeTooltip, setDegreeTooltip] = useState(null); // { x, y, name, count, percent }
 
   const yearDistribution = useMemo(() => {
     const counts = {};
@@ -581,19 +586,45 @@ export default function UserActivityDashboard() {
               <ViewShot ref={degreeChartRef} options={{ format: "png", quality: 0.8 }} style={{ backgroundColor: '#fff', marginBottom: 16 }}>
                 <View style={{ backgroundColor: '#fafafa', borderRadius: 16, padding: 16 }}>
                   <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 10 }}>By Degree Type</Text>
-                  <PieChart
-                    data={degreeDistribution}
-                    width={screenWidth - 64}
-                    height={200}
-                    chartConfig={{
-                      color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                    }}
-                    accessor={"population"}
-                    backgroundColor={"transparent"}
-                    paddingLeft={"15"}
-                    center={[10, 0]}
-                    absolute
-                  />
+
+                  {/* Chart with NO Legend */}
+                  <View style={{ alignItems: 'center' }}>
+                    <PieChart
+                      data={degreeDistribution}
+                      width={screenWidth - 96}
+                      height={200}
+                      chartConfig={{
+                        color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                      }}
+                      accessor={"population"}
+                      backgroundColor={"transparent"}
+                      paddingLeft={"12"} // Adjust center
+                      center={[(screenWidth - 96) / 4, 0]} // Approximate center
+                      hasLegend={false}
+                    />
+                  </View>
+
+                  {/* Custom Interactive Legend */}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginTop: 20 }}>
+                    {degreeDistribution.map((item, index) => (
+                      <TouchableOpacity
+                        key={index}
+                        style={{ flexDirection: 'row', alignItems: 'center', margin: 8, padding: 6, backgroundColor: '#fff', borderRadius: 8, elevation: 1 }}
+                        onPress={() => {
+                          Alert.alert(
+                            item.name,
+                            `Students: ${item.population}\nPercentage: ${item.percent}%`,
+                            [{ text: "OK" }]
+                          );
+                        }}
+                      >
+                        <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: item.color, marginRight: 6 }} />
+                        <Text style={{ fontSize: 12, fontWeight: '500', color: '#333' }}>{item.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  <Text style={{ textAlign: 'center', color: '#999', fontSize: 10, marginTop: 10 }}>(Tap legend items for details)</Text>
+
                 </View>
               </ViewShot>
 
