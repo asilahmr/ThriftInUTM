@@ -49,7 +49,7 @@ router.get('/user/:userId', async (req, res) => {
     try {
         // Total spending
         const totalQuery = `SELECT IFNULL(SUM(total_amount),0) AS total_spending, COUNT(*) AS total_items FROM orders WHERE buyer_id = ? AND order_status = 'completed' ${filter.clause}`;
-        const [totalResult] = await db.query(totalQuery, [userId, ...filter.params]);
+        const totalResult = await db.query(totalQuery, [userId, ...filter.params]);
 
         // Top categories
         const catQuery = `
@@ -61,7 +61,7 @@ router.get('/user/:userId', async (req, res) => {
             GROUP BY p.category
             ORDER BY totalSpent DESC
         `;
-        const [categoriesResult] = await db.query(catQuery, [userId, ...itemFilter.params]);
+        const categoriesResult = await db.query(catQuery, [userId, ...itemFilter.params]);
 
         // Buying trend - Dynamic Aggregation
         let dateFormat = '%Y-%m-%d';
@@ -69,7 +69,7 @@ router.get('/user/:userId', async (req, res) => {
         if (type === 'thisMonth' || type === 'lastMonth' || (month && year)) {
             dateFormat = '%Y-%m-%d';
         } else {
-            const [rangeResult] = await db.query(
+            const rangeResult = await db.query(
                 `SELECT DATEDIFF(MAX(order_date), MIN(order_date)) as diff_days 
                  FROM orders
                  WHERE buyer_id = ? AND order_status = 'completed'`,
@@ -88,7 +88,7 @@ router.get('/user/:userId', async (req, res) => {
             GROUP BY date
             ORDER BY date
         `;
-        const [trendResult] = await db.query(trendQuery, [userId, ...filter.params]);
+        const trendResult = await db.query(trendQuery, [userId, ...filter.params]);
 
         res.json({
             totalSpending: totalResult[0]?.total_spending || 0,
@@ -112,7 +112,7 @@ router.get('/admin', requireAdmin, async (req, res) => {
     try {
         // Total spending
         const totalQuery = `SELECT IFNULL(SUM(total_amount),0) AS total_spending, COUNT(*) AS total_orders FROM orders WHERE order_status = 'completed' ${filter.clause}`;
-        const [totalResult] = await db.query(totalQuery, filter.params);
+        const totalResult = await db.query(totalQuery, filter.params);
 
         const itemsQuery = `
             SELECT COUNT(*) AS total_items 
@@ -120,7 +120,7 @@ router.get('/admin', requireAdmin, async (req, res) => {
             JOIN orders o ON oi.order_id = o.order_id 
             WHERE o.order_status = 'completed' ${itemFilter.clause}
         `;
-        const [totalItemsResult] = await db.query(itemsQuery, itemFilter.params);
+        const totalItemsResult = await db.query(itemsQuery, itemFilter.params);
 
         // Top categories
         const catQuery = `
@@ -132,14 +132,14 @@ router.get('/admin', requireAdmin, async (req, res) => {
             GROUP BY p.category
             ORDER BY totalSpent DESC
         `;
-        const [categoriesResult] = await db.query(catQuery, itemFilter.params);
+        const categoriesResult = await db.query(catQuery, itemFilter.params);
 
         // Buying trend - Dynamic Aggregation
         let dateFormat = '%Y-%m-%d';
         if (type === 'thisMonth' || type === 'lastMonth' || (month && year)) {
             dateFormat = '%Y-%m-%d';
         } else {
-            const [rangeResult] = await db.query(
+            const rangeResult = await db.query(
                 `SELECT DATEDIFF(MAX(order_date), MIN(order_date)) as diff_days 
                  FROM orders
                  WHERE order_status = 'completed'`
@@ -157,11 +157,11 @@ router.get('/admin', requireAdmin, async (req, res) => {
             GROUP BY date
             ORDER BY date
         `;
-        const [trendResult] = await db.query(trendQuery, filter.params);
+        const trendResult = await db.query(trendQuery, filter.params);
 
         // Top buyers
         const buyersQuery = `
-            SELECT s.name, SUM(oi.snapshot_price) AS totalSpent, COUNT(*) AS itemsBought
+            SELECT s.name, SUM(oi.product_price) AS totalSpent, COUNT(*) AS itemsBought
             FROM orders o
             JOIN order_items oi ON o.order_id = oi.order_id
             JOIN user u ON o.buyer_id = u.id
@@ -171,7 +171,7 @@ router.get('/admin', requireAdmin, async (req, res) => {
             ORDER BY totalSpent DESC
             LIMIT 5
         `;
-        const [topBuyersResult] = await db.query(buyersQuery, itemFilter.params);
+        const topBuyersResult = await db.query(buyersQuery, itemFilter.params);
 
         res.json({
             totalSpending: totalResult[0]?.total_spending || 0,
@@ -201,8 +201,8 @@ router.get('/user/:userId/category/:category', async (req, res) => {
     const userId = requestedUserId;
 
     try {
-        const [results] = await db.query(
-            `SELECT p.name, oi.snapshot_price AS amount, o.order_date AS sold_at
+        const results = await db.query(
+            `SELECT p.name, oi.product_price AS amount, o.order_date AS sold_at
           FROM order_items oi
           JOIN orders o ON oi.order_id = o.order_id
           JOIN products p ON oi.product_id = p.product_id
