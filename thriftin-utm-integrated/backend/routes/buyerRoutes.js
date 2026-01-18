@@ -202,7 +202,7 @@ router.get('/user/:userId/category/:category', async (req, res) => {
 
     try {
         const results = await db.query(
-            `SELECT p.name, oi.product_price AS amount, o.order_date AS sold_at
+            `SELECT o.order_id, p.name, oi.product_price AS amount, o.order_date AS sold_at
           FROM order_items oi
           JOIN orders o ON oi.order_id = o.order_id
           JOIN products p ON oi.product_id = p.product_id
@@ -210,7 +210,7 @@ router.get('/user/:userId/category/:category', async (req, res) => {
           ORDER BY o.order_date DESC`,
             [userId, category]
         );
-
+        console.log(`[BuyerRoutes] Category ${category} items for user ${userId}:`, results.length > 0 ? results[0] : 'No items');
         res.json(results);
     } catch (err) {
         res.status(500).json({ error: err.message });

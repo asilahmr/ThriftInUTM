@@ -254,7 +254,7 @@ router.get('/user/:userId/category/:category', async (req, res) => {
     const { category } = req.params;
 
     const query = `
-        SELECT p.name, oi.product_price AS revenue, o.order_date as sold_at
+        SELECT o.order_id, p.name, oi.product_price AS revenue, o.order_date as sold_at
         FROM order_items oi
         JOIN products p ON oi.product_id = p.product_id
         JOIN orders o ON oi.order_id = o.order_id
@@ -274,7 +274,7 @@ router.get('/user/:userId/category/:category', async (req, res) => {
 router.get('/category/:category', requireAdmin, async (req, res) => {
     const { category } = req.params;
     const query = `
-        SELECT p.name, oi.product_price AS revenue, o.order_date as sold_at
+        SELECT o.order_id, p.name, oi.product_price AS revenue, o.order_date as sold_at
         FROM order_items oi
         JOIN products p ON oi.product_id = p.product_id
         JOIN orders o ON oi.order_id = o.order_id
@@ -286,6 +286,70 @@ router.get('/category/:category', requireAdmin, async (req, res) => {
         const results = await db.query(query, [category]);
         res.json(results);
     } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get sold item details (with buyer info)
+router.get('/sold/:orderId', async (req, res) => {
+    const { orderId } = req.params;
+    const authenticatedUserId = req.user.id;
+    const isAdmin = req.user.userType === 'admin';
+
+    try {
+        const query = `
+            SELECT 
+                o.order_id, o.order_date, o.total_amount, o.payment_method,
+                oi.product_name, oi.product_price, oi.product_category, oi.product_condition,
+                oi.seller_id,
+                s.name AS buyer_name, u.email AS buyer_email,
+                s.matric AS buyer_matric
+            FROM orders o
+            JOIN order_items oi ON o.order_id = oi.order_id
+            JOIN user u ON o.buyer_id = u.id
+            LEFT JOIN students s ON u.id = s.user_id
+            WHERE o.order_id = ?
+        `;
+
+        const rows = await db.query(query, [orderId]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        const sale = rows[0];
+
+        // Security check: Ensure requester is the seller or admin
+        if (!isAdmin && sale.seller_id !== authenticatedUserId) {
+            return res.status(403).json({ message: "Unauthorized: You are not the seller of this item" });
+        }
+
+        // Get product image
+        const [images] = await db.query(
+            `SELECT image_url FROM product_images 
+             WHERE product_id = (SELECT product_id FROM order_items WHERE order_id = ?) 
+             ORDER BY is_primary DESC LIMIT 1`,
+            [orderId]
+        );
+
+        sale.product_image = images.length > 0 ? images[0].image_url : null;
+
+        // Calculate sales rank (how many items sold by this seller up to this date/order)
+        const rankResult = await db.query(
+            `SELECT COUNT(*) AS count
+             FROM order_items oi
+             JOIN orders o ON oi.order_id = o.order_id
+             WHERE oi.seller_id = ? 
+             AND o.order_status = 'completed'
+             AND (o.order_date < ? OR (o.order_date = ? AND o.order_id <= ?))`,
+            [sale.seller_id, sale.order_date, sale.order_date, orderId]
+        );
+
+        sale.sales_rank = rankResult[0].count;
+
+        res.json(sale);
+    } catch (err) {
+        console.error('Get sold item details error:', err);
         res.status(500).json({ error: err.message });
     }
 });

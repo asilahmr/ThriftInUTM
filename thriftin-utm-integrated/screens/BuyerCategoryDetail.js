@@ -1,20 +1,30 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const BuyerCategoryDetail = ({ route }) => {
+const BuyerCategoryDetail = ({ navigation, route }) => {
   const { category, items: navItems } = route.params;
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([]);
 
   useEffect(() => {
     if (Array.isArray(navItems)) {
+      console.log('Category Items:', navItems);
       setItems(navItems);
     } else {
       setItems([]);
     }
     setLoading(false);
   }, [navItems]);
+
+  const handleItemPress = (item) => {
+    console.log('Item pressed:', item);
+    if (item.order_id) {
+      navigation.navigate('OrderReceipt', { orderId: item.order_id });
+    } else {
+      console.warn('No order_id found for item');
+    }
+  };
 
   if (loading) {
     return (
@@ -39,7 +49,12 @@ const BuyerCategoryDetail = ({ route }) => {
       ) : (
         <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
           {items.map((item, index) => (
-            <View key={index} style={styles.itemCard}>
+            <TouchableOpacity
+              key={index}
+              style={styles.itemCard}
+              onPress={() => handleItemPress(item)}
+              activeOpacity={0.7}
+            >
               <Text style={styles.itemName}>Product: {item.name}</Text>
               <Text style={styles.itemAmount}>Amount: RM {item.amount.toFixed(2)}</Text>
               <Text style={styles.itemDate}>
@@ -48,7 +63,8 @@ const BuyerCategoryDetail = ({ route }) => {
                   return `${d.getDate()} ${d.toLocaleString('default', { month: 'short' })} ${d.getFullYear()}, ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
                 })()}
               </Text>
-            </View>
+              <Text style={styles.tapHint}>Tap to view receipt ›</Text>
+            </TouchableOpacity>
           ))}
         </ScrollView>
       )}
@@ -75,5 +91,6 @@ const styles = StyleSheet.create({
   itemAmount: { fontSize: 16, marginBottom: 4 },
   itemDate: { fontSize: 14, color: '#555' },
   noData: { textAlign: 'center', marginTop: 20, fontSize: 16, color: '#555' },
+  tapHint: { fontSize: 12, color: '#c70000', marginTop: 8, fontStyle: 'italic', textAlign: 'right' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });

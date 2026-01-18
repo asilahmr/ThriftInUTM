@@ -21,8 +21,8 @@ const OrderReceiptScreen = ({ route, navigation }) => {
     try {
       console.log('📄 Fetching receipt for order:', orderId);
       const response = await orderApi.getOrderReceipt(orderId);
-      console.log('✅ Receipt loaded:', response.data);
-      setOrder(response.data);
+      console.log('✅ Receipt loaded:', response.data.data);
+      setOrder(response.data.data);
     } catch (error) {
       console.error('❌ Receipt error:', error);
       Alert.alert('Error', 'Failed to load order receipt', [
@@ -148,7 +148,7 @@ Date: ${new Date(order.order_date).toLocaleString()}
   const primaryImage = order.product_images && order.product_images.length > 0
     ? order.product_images[0]
     : null;
-  
+
   const imageUrl = primaryImage
     ? `${API_BASE_URL.replace('/api', '')}${primaryImage.image_url}`
     : 'https://via.placeholder.com/400';
@@ -156,14 +156,15 @@ Date: ${new Date(order.order_date).toLocaleString()}
   return (
     <View style={styles.container}>
       <ScrollView style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.receiptTitle}>Order Receipt</Text>
-          <Text style={styles.orderId}>Order #{order.order_id}</Text>
-          <View style={[styles.statusBadge, { backgroundColor: statusStyle.backgroundColor }]}>
-            <Text style={[styles.statusText, { color: statusStyle.color }]}>
-              {order.order_status === 'completed' ? '✓ Completed' : '✕ Cancelled'}
-            </Text>
+        {/* Order Identifier Card */}
+        <View style={styles.headerCard}>
+          <View style={styles.headerRow}>
+            <Text style={styles.orderId}>Order #{order.order_id}</Text>
+            <View style={[styles.statusBadge, { backgroundColor: statusStyle.backgroundColor }]}>
+              <Text style={[styles.statusText, { color: statusStyle.color }]}>
+                {order.order_status === 'completed' ? '✓ Completed' : '✕ Cancelled'}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -203,9 +204,9 @@ Date: ${new Date(order.order_date).toLocaleString()}
               <Text style={styles.infoLabel}>Payment Method</Text>
               <Text style={styles.infoValue}>
                 {order.payment_method === 'wallet' ? '💰 Wallet' :
-                order.payment_method === 'credit_card' ? '💳 Credit/Debit Card' :
-                order.payment_method === 'e_wallet' ? '📱 E-Wallet' :
-                '🏦 Online Banking'}
+                  order.payment_method === 'credit_card' ? '💳 Credit/Debit Card' :
+                    order.payment_method === 'e_wallet' ? '📱 E-Wallet' :
+                      '🏦 Online Banking'}
               </Text>
             </View>
             {order.cancelled_at && (
@@ -277,7 +278,7 @@ Date: ${new Date(order.order_date).toLocaleString()}
           <View style={styles.cancelledCard}>
             <Text style={styles.cancelledTitle}>Order Cancelled</Text>
             <Text style={styles.cancelledText}>
-              This order has been cancelled. The item has been returned to the marketplace 
+              This order has been cancelled. The item has been returned to the marketplace
               and is now available for other buyers.
             </Text>
           </View>
@@ -334,27 +335,34 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  header: {
-    backgroundColor: COLORS.primary,
-    padding: 24,
+  headerCard: {
+    backgroundColor: COLORS.card,
+    margin: 20,
+    marginBottom: 0,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  receiptTitle: {
-    fontSize: 18,
-    color: '#FFF',
-    opacity: 0.9,
-    marginBottom: 8,
-  },
   orderId: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#FFF',
-    marginBottom: 12,
+    color: COLORS.primary,
   },
   statusBadge: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
   statusText: {
     fontSize: 14,

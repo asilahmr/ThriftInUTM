@@ -1,6 +1,6 @@
 // CategoryProducts.js
 import React, { useEffect, useState, useLayoutEffect } from 'react';
-import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import api from '../utils/api';
 // import axios from 'axios'; // REMOVED
 import styles from './styles/styles';
@@ -52,7 +52,19 @@ export default function CategoryProducts({ route, navigation }) {
 
       {products.length > 0 ? (
         products.map((item, index) => (
-          <View key={index} style={styles.card}>
+          <TouchableOpacity
+            key={index}
+            style={styles.card}
+            activeOpacity={0.7}
+            onPress={() => {
+              if (item.order_id) {
+                navigation.navigate('SoldItemScreen', { orderId: item.order_id });
+              } else {
+                console.log('Item missing order_id:', item);
+                console.warn('No order_id found for item in CategoryProducts');
+              }
+            }}
+          >
             <Text style={{ fontSize: 16, fontWeight: '500', marginBottom: 4, color: '#000' }}>Product: {item.name}</Text>
             <Text style={{ fontSize: 16, marginBottom: 4, color: '#000' }}>
               Amount: RM {parseFloat(item.revenue).toFixed(2)}
@@ -63,7 +75,8 @@ export default function CategoryProducts({ route, navigation }) {
                 return `${d.getDate()} ${d.toLocaleString('default', { month: 'short' })} ${d.getFullYear()}, ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
               })() : 'N/A'}
             </Text>
-          </View>
+            <Text style={{ fontSize: 12, color: '#C70000', marginTop: 8, fontStyle: 'italic' }}>Tap to view sale details ›</Text>
+          </TouchableOpacity>
         ))
       ) : (
         <Text style={{ color: '#800000', padding: 20 }}>No products sold in this category yet.</Text>

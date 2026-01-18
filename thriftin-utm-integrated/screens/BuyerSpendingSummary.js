@@ -80,7 +80,8 @@ const BuyerSpendingSummary = ({ route, navigation }) => {
         name: item.name || item.productName,
         category: category,
         amount: Number(item.amount || item.totalSpent || item.price),
-        sold_at: item.sold_at || item.soldAt
+        sold_at: item.sold_at || item.soldAt,
+        order_id: item.order_id // Pass order_id for navigation
       }));
 
 

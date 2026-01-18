@@ -20,6 +20,7 @@ import ResetPasswordScreen from '../../ResetPasswordScreen';
 import SalesDashboard from '../../SalesDashboard';
 import BuyerSpendingSummary from '../../BuyerSpendingSummary';
 import CategoryProducts from '../../CategoryProducts';
+import SoldItemScreen from '../../SoldItemScreen';
 import BuyerCategoryDetail from '../../BuyerCategoryDetail';
 import UserActivityDashboard from '../../UserActivityDashboard';
 import AdminPanel from '../../AdminPanel';
@@ -198,6 +199,12 @@ const AppNavigator = () => {
         <Stack.Screen
           name="CategoryProducts"
           component={CategoryProducts}
+        />
+
+        <Stack.Screen
+          name="SoldItemScreen"
+          component={SoldItemScreen}
+          options={{ title: 'Sale Details' }}
         />
 
         <Stack.Screen
