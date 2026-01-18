@@ -6,7 +6,7 @@ class OrderController {
   // Prepare checkout (validate product before showing checkout screen)
   static async prepareCheckout(req, res) {
     try {
-      const buyerId = req.user.user_id;
+      const buyerId = req.user.id;
       const { productId } = req.params;
 
       console.log(`Preparing checkout for product ${productId} by buyer ${buyerId}`);
@@ -58,7 +58,7 @@ class OrderController {
   // Process payment with wallet (no payment method needed)
   static async processPayment(req, res) {
     try {
-      const buyerId = req.user.user_id;
+      const buyerId = req.user.id;
       const { productId } = req.body;
 
       console.log(`Processing wallet payment: Product ${productId} by buyer ${buyerId}`);
@@ -91,7 +91,7 @@ class OrderController {
 
     } catch (error) {
       console.error('Process payment error:', error);
-      
+
       if (error.message === 'Product is no longer available') {
         return res.status(409).json({
           success: false,
@@ -119,7 +119,7 @@ class OrderController {
   // Get buyer's order history
   static async getOrderHistory(req, res) {
     try {
-      const buyerId = req.user.user_id;
+      const buyerId = req.user.id;
 
       console.log(`Fetching order history for buyer ${buyerId}`);
 
@@ -144,7 +144,7 @@ class OrderController {
   // Get order receipt details
   static async getOrderReceipt(req, res) {
     try {
-      const buyerId = req.user.user_id;
+      const buyerId = req.user.id;
       const { orderId } = req.params;
 
       console.log(`Fetching order receipt: Order ${orderId} for buyer ${buyerId}`);
@@ -182,7 +182,7 @@ class OrderController {
   // Cancel order (with wallet refund)
   static async cancelOrder(req, res) {
     try {
-      const buyerId = req.user.user_id;
+      const buyerId = req.user.id;
       const { orderId } = req.params;
 
       console.log(`Cancelling order: Order ${orderId} by buyer ${buyerId}`);

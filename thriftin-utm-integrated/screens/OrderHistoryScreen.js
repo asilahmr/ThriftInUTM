@@ -24,8 +24,8 @@ const OrderHistoryScreen = ({ navigation }) => {
     try {
       console.log('📦 Fetching order history...');
       const response = await orderApi.getOrderHistory();
-      console.log('✅ Orders loaded:', response.count);
-      setOrders(response.data || []);
+      console.log('✅ Orders loaded:', response.data.count);
+      setOrders(response.data.data || []);
     } catch (error) {
       console.error('❌ Fetch orders error:', error);
     } finally {
@@ -86,7 +86,7 @@ const OrderHistoryScreen = ({ navigation }) => {
         activeOpacity={0.7}
       >
         <Image source={{ uri: imageUrl }} style={styles.productImage} />
-        
+
         <View style={styles.orderInfo}>
           <View style={styles.orderHeader}>
             <Text style={styles.orderId}>Order #{item.order_id}</Text>
@@ -110,7 +110,7 @@ const OrderHistoryScreen = ({ navigation }) => {
               <Text style={styles.detailIcon}>{getPaymentMethodIcon(item.payment_method)}</Text>
               <Text style={styles.detailText}>
                 {item.payment_method === 'credit_card' ? 'Card' :
-                 item.payment_method === 'e_wallet' ? 'E-Wallet' : 'Banking'}
+                  item.payment_method === 'e_wallet' ? 'E-Wallet' : 'Banking'}
               </Text>
             </View>
           </View>

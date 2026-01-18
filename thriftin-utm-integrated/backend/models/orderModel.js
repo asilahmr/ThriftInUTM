@@ -137,10 +137,9 @@ class OrderModel {
         oi.product_condition,
         oi.seller_name,
         oi.seller_email,
-        p.product_id
+        oi.product_id
       FROM orders o
       JOIN order_items oi ON o.order_id = oi.order_id
-      LEFT JOIN products p ON oi.product_id = p.product_id
       WHERE o.buyer_id = ?
       ORDER BY o.order_date DESC
     `;

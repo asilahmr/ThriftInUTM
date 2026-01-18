@@ -27,8 +27,8 @@ const MyItemsScreen = ({ navigation }) => {
       const response = await productApi.getMyProducts();
       console.log('✅ API Response:', response);
       console.log('Products data:', response.data);
-      console.log('Products count:', response.data?.length);
-      setProducts(response.data || []);
+      console.log('Products count:', response.data?.data?.length);
+      setProducts(response.data.data || []);
     } catch (error) {
       console.error('❌ Fetch error:', error);
       Alert.alert('Error', error.message);

@@ -7,7 +7,7 @@ class ProductController {
   // Add New Product
   static async addProduct(req, res) {
     try {
-      const sellerId = req.user.user_id;
+      const sellerId = req.user.id;
       const productData = req.body;
 
       // Validate product data
@@ -62,7 +62,7 @@ class ProductController {
   // View Own Product Listing
   static async getMyProducts(req, res) {
     try {
-      const sellerId = req.user.user_id;
+      const sellerId = req.user.id;
 
       const products = await ProductModel.getProductsBySeller(sellerId);
 
@@ -95,7 +95,7 @@ class ProductController {
   static async getProduct(req, res) {
     try {
       const productId = req.params.id;
-      const sellerId = req.user.user_id;
+      const sellerId = req.user.id;
 
       const product = await ProductModel.getProductById(productId, sellerId);
 
@@ -125,7 +125,7 @@ class ProductController {
   static async updateProduct(req, res) {
     try {
       const productId = req.params.id;
-      const sellerId = req.user.user_id;
+      const sellerId = req.user.id;
       const updateData = req.body;
 
       // Check if product exists and belongs to user
@@ -195,7 +195,7 @@ class ProductController {
   static async deleteProduct(req, res) {
     try {
       const productId = req.params.id;
-      const sellerId = req.user.user_id;
+      const sellerId = req.user.id;
 
       // Check if product exists and belongs to user
       const product = await ProductModel.getProductById(productId, sellerId);
