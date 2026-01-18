@@ -301,7 +301,7 @@ router.get('/sold/:orderId', async (req, res) => {
             SELECT 
                 o.order_id, o.order_date, o.total_amount, o.payment_method,
                 oi.product_name, oi.product_price, oi.product_category, oi.product_condition,
-                oi.seller_id,
+                oi.seller_id, o.buyer_id,
                 s.name AS buyer_name, u.email AS buyer_email,
                 s.matric AS buyer_matric
             FROM orders o

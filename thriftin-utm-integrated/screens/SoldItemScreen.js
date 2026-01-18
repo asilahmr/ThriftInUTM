@@ -5,6 +5,8 @@ import {
 } from 'react-native';
 import { COLORS, API_BASE_URL } from '../utils/constants';
 import api from '../utils/api';
+import { chatApi } from '../api/productApi';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SoldItemScreen = ({ route, navigation }) => {
     const { orderId } = route.params;
@@ -26,6 +28,47 @@ const SoldItemScreen = ({ route, navigation }) => {
             navigation.goBack();
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleChatWithBuyer = async () => {
+        if (!sale) return;
+
+        try {
+            const userData = await AsyncStorage.getItem('userData');
+            if (!userData) {
+                Alert.alert('Error', 'Please login to chat');
+                return;
+            }
+
+            const user = JSON.parse(userData);
+            // Check both 'id' and 'user_id' just in case structure varies
+            const currentUserId = user.id || user.user_id;
+
+            if (!currentUserId) {
+                Alert.alert('Error', 'User ID not found. Please relogin.');
+                return;
+            }
+
+            console.log('Initiating chat with buyer:', sale.buyer_name, 'from seller:', currentUserId);
+
+            const conversation = await chatApi.createConversation(
+                currentUserId,
+                sale.buyer_id
+            );
+
+            console.log('Chat started/found. Conversation ID:', conversation.conversation_id);
+
+            navigation.navigate('ChatDetail', {
+                conversationId: conversation.conversation_id,
+                otherUserId: sale.buyer_id, // The buyer is the 'other' user for the seller
+                otherUsername: sale.buyer_name,
+                userId: currentUserId
+            });
+
+        } catch (error) {
+            console.error('Chat initialization error:', error);
+            Alert.alert('Error', 'Could not start chat with buyer');
         }
     };
 
@@ -113,6 +156,9 @@ const SoldItemScreen = ({ route, navigation }) => {
                             <Text style={styles.buyerName}>{sale.buyer_name}</Text>
                             <Text style={styles.buyerEmail}>{sale.buyer_email}</Text>
                         </View>
+                        <TouchableOpacity style={[styles.contactButton, { marginRight: 8 }]} onPress={handleChatWithBuyer}>
+                            <Text style={styles.contactIcon}>💬</Text>
+                        </TouchableOpacity>
                         <TouchableOpacity style={styles.contactButton} onPress={handleEmailBuyer}>
                             <Text style={styles.contactIcon}>✉️</Text>
                         </TouchableOpacity>

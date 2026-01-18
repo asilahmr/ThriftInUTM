@@ -4,7 +4,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, Alert, Share, Linking, Image
 } from 'react-native';
-import { orderApi } from '../api/productApi';
+import { orderApi, chatApi } from '../api/productApi';
 import { COLORS, API_BASE_URL } from '../utils/constants';
 
 const OrderReceiptScreen = ({ route, navigation }) => {
@@ -84,6 +84,33 @@ const OrderReceiptScreen = ({ route, navigation }) => {
     );
 
     Linking.openURL(`mailto:${order.seller_email}?subject=${subject}&body=${body}`);
+  };
+
+  const handleChatWithSeller = async () => {
+    if (!order) return;
+
+    try {
+      console.log('💬 Initiating chat with seller:', order.seller_name);
+
+      const response = await chatApi.createConversation(order.buyer_id, order.seller_id);
+
+      if (response.status === 200 && response.data) {
+        const conversationId = response.data.conversation_id;
+        console.log('✅ Chat started/found. Conversation ID:', conversationId);
+
+        navigation.navigate('ChatDetail', {
+          conversationId: conversationId,
+          otherUserId: order.seller_id,
+          otherUsername: order.seller_name,
+          userId: order.buyer_id
+        });
+      } else {
+        throw new Error('Failed to create conversation');
+      }
+    } catch (error) {
+      console.error('❌ Chat initialization error:', error);
+      Alert.alert('Error', 'Failed to start chat with seller');
+    }
   };
 
   const handleShareReceipt = async () => {
@@ -233,6 +260,12 @@ Date: ${new Date(order.order_date).toLocaleString()}
               <Text style={styles.sellerName}>{order.seller_name}</Text>
               <Text style={styles.sellerEmail}>{order.seller_email}</Text>
             </View>
+            <TouchableOpacity
+              style={[styles.contactButton, { marginRight: 10, backgroundColor: COLORS.success }]}
+              onPress={handleChatWithSeller}
+            >
+              <Text style={styles.contactButtonText}>💬</Text>
+            </TouchableOpacity>
             <TouchableOpacity
               style={styles.contactButton}
               onPress={handleContactSeller}

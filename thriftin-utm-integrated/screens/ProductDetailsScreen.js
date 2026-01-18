@@ -24,7 +24,7 @@ const ProductDetailsScreen = ({ route, navigation }) => {
       console.log('📥 Fetching product details:', productId);
       const response = await marketplaceApi.getProductDetails(productId);
       console.log('✅ Product loaded:', response.data);
-      setProduct(response.data);
+      setProduct(response.data.data);
     } catch (error) {
       console.error('❌ Fetch error:', error);
       Alert.alert('Error', 'Failed to load product details');
@@ -69,7 +69,7 @@ const ProductDetailsScreen = ({ route, navigation }) => {
       : null;
 
     console.log('🛒 Navigating to checkout for product:', productId);
-    
+
     navigation.navigate('Checkout', {
       productId: product.product_id,
       productImage: firstImage
@@ -246,7 +246,7 @@ const ProductDetailsScreen = ({ route, navigation }) => {
             >
               <Text style={styles.contactButtonSmallText}>📧 Contact</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={styles.buyNowButton}
               onPress={handleBuyNow}
@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: COLORS.text,
   },
-  
+
   soldBadge: {
     position: 'absolute',
     top: 40,
@@ -487,7 +487,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
   },
- 
+
   footerButtons: {
     flexDirection: 'row',
     gap: 12,
@@ -518,7 +518,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-  
+
   contactButton: {
     backgroundColor: COLORS.primary,
     padding: 16,

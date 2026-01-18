@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const messageController = require('../controllers/messageController');
-const upload = require('../middleware/upload');
+const { upload } = require('../middleware/upload');
 
 router.get('/:conversationId', messageController.getMessages);
 router.post('/', upload.single('attachment'), messageController.sendMessage);

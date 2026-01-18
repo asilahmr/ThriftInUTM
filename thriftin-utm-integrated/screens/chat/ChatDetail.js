@@ -13,28 +13,26 @@ import {
   ScrollView,
   ActivityIndicator
 } from 'react-native';
-import axios from 'axios';
-import API_BASE from '../../config';
-// ⚠️ IMPORTANT: Double-check this IP address matches your PC's IPv4 address!
-const API_URL = `${API_BASE}/api`;
+import api from '../../utils/api';
+// const API_URL = `${API_BASE}/api`; // not needed with api instance
 
 const ChatDetailScreen = ({ navigation, route }) => {
   const { conversationId, otherUserId, otherUsername, isAI, userId } = route.params;
-  
+
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [quickActions, setQuickActions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
-  
+
   const flatListRef = useRef(null);
 
   useEffect(() => {
     fetchMessages();
-    
+
     // Set up auto-refresh (Polling) to check for new messages every 3 seconds
     const intervalId = setInterval(() => {
-        fetchMessages(true); // true = silent refresh (no loading spinner)
+      fetchMessages(true); // true = silent refresh (no loading spinner)
     }, 3000);
 
     if (isAI) {
@@ -64,34 +62,38 @@ const ChatDetailScreen = ({ navigation, route }) => {
   //   if (messages.length === 0 && isAI) {
   //     // Send greeting strictly after a short delay to ensure UI is ready
   //     setTimeout(() => sendAIGreeting(), 500);
-  //   }
-  // };
+  const checkForGreeting = async () => {
+    if (messages.length === 0 && isAI) {
+      // Send greeting strictly after a short delay to ensure UI is ready
+      setTimeout(() => sendAIGreeting(), 500);
+    }
+  };
 
-  // const sendAIGreeting = async () => {
-  //   // Only send if we haven't already
-  //   try {
-  //       // Check if greeting exists on server first to avoid duplicates
-  //       const check = await axios.get(`${API_URL}/messages/${conversationId}`);
-  //       if(check.data.length > 0) return;
+  const sendAIGreeting = async () => {
+    // Only send if we haven't already
+    try {
+      // Check if greeting exists on server first to avoid duplicates
+      const check = await api.get(`/api/messages/${conversationId}`);
+      if (check.data.length > 0) return;
 
-  //       const greetingMessage = {
-  //           conversation_id: conversationId,
-  //           sender_id: otherUserId,
-  //           message_text: `Hello! I'm your AI Shopping Assistant 👋\n\nI can help you with:\n• Finding textbooks within your budget\n• Negotiating better prices\n• General buying and selling advice\n\nHow can I assist you today?`,
-  //           message_type: 'text'
-  //       };
-  //       await axios.post(`${API_URL}/messages`, greetingMessage);
-  //       fetchMessages(true);
-  //   } catch (error) {
-  //       console.log('Greeting check failed:', error);
-  //   }
-  // };
+      const greetingMessage = {
+        conversation_id: conversationId,
+        sender_id: otherUserId,
+        message_text: `Hello! I'm your AI Shopping Assistant 👋\n\nI can help you with:\n• Finding textbooks within your budget\n• Negotiating better prices\n• General buying and selling advice\n\nHow can I assist you today?`,
+        message_type: 'text'
+      };
+      await api.post(`/api/messages`, greetingMessage);
+      fetchMessages(true);
+    } catch (error) {
+      console.log('Greeting check failed:', error);
+    }
+  };
 
   const fetchMessages = async (silent = false) => {
     try {
       if (!silent) setLoading(true);
-      const response = await axios.get(
-        `${API_URL}/messages/${conversationId}?userId=${userId}`
+      const response = await api.get(
+        `/api/messages/${conversationId}?userId=${userId}`
       );
       setMessages(response.data);
       if (!silent) setLoading(false);
@@ -103,14 +105,14 @@ const ChatDetailScreen = ({ navigation, route }) => {
 
   const fetchQuickActions = async () => {
     try {
-      const response = await axios.get(`${API_URL}/ai/quick-actions`);
+      const response = await api.get(`/api/ai/quick-actions`);
       setQuickActions(response.data);
     } catch (error) {
       console.log('Quick actions not available');
       // Fallback data if API fails
       setQuickActions([
-          {id: 1, text: "Check prices"}, 
-          {id: 2, text: "How to buy?"}
+        { id: 1, text: "Check prices" },
+        { id: 2, text: "How to buy?" }
       ]);
     }
   };
@@ -133,22 +135,22 @@ const ChatDetailScreen = ({ navigation, route }) => {
     setInputText(''); // Clear input immediately
 
     // 2. Send to Server
-const newMessagePayload = {
-  conversation_id: conversationId,
-  sender_id: userId,
-  receiver_id: otherUserId, // <--- ADD THIS LINE
-  message_text: text,
-  message_type: 'text'
-};
+    const newMessagePayload = {
+      conversation_id: conversationId,
+      sender_id: userId,
+      receiver_id: otherUserId, // <--- ADD THIS LINE
+      message_text: text,
+      message_type: 'text'
+    };
 
     try {
-      const res = await axios.post(`${API_URL}/messages`, newMessagePayload);
+      const res = await api.post(`/api/messages`, newMessagePayload);
 
       setMessages(prev => [...prev.filter(m => !m.pending), res.data.userMessage]);
 
-    if (res.data.aiMessage) {
-      setMessages(prev => [...prev, res.data.aiMessage]);
-    }
+      if (res.data.aiMessage) {
+        setMessages(prev => [...prev, res.data.aiMessage]);
+      }
 
       // if (isAI) {
       //   // Trigger AI Response
@@ -162,28 +164,28 @@ const newMessagePayload = {
     }
   };
 
-  // const getAIResponse = async (userMessage) => {
-  //   try {
-  //     // Simulate "typing" by not showing immediately? 
-  //     // For now, we just wait for server
-  //     const response = await axios.post(`${API_URL}/ai/respond`, {
-  //       message: userMessage,
-  //       userId: userId
-  //     });
+  const getAIResponse = async (userMessage) => {
+    try {
+      // Simulate "typing" by not showing immediately? 
+      // For now, we just wait for server
+      const response = await api.post(`/api/ai/respond`, {
+        message: userMessage,
+        userId: userId
+      });
 
-  //     const aiMessage = {
-  //       conversation_id: conversationId,
-  //       sender_id: otherUserId,
-  //       message_text: response.data.response,
-  //       message_type: 'text'
-  //     };
+      const aiMessage = {
+        conversation_id: conversationId,
+        sender_id: otherUserId,
+        message_text: response.data.response,
+        message_type: 'text'
+      };
 
-  //     await axios.post(`${API_URL}/messages`, aiMessage);
-  //     fetchMessages(true);
-  //   } catch (error) {
-  //     console.error('Error getting AI response:', error);
-  //   }
-  // };
+      await api.post(`/api/messages`, aiMessage);
+      fetchMessages(true);
+    } catch (error) {
+      console.error('Error getting AI response:', error);
+    }
+  };
 
   const handleQuickAction = (action) => {
     sendMessage(action.text);
@@ -202,7 +204,7 @@ const newMessagePayload = {
 
   const renderMessage = ({ item }) => {
     const isMyMessage = item.sender_id === userId;
-    
+
     return (
       <View
         style={[
@@ -248,44 +250,44 @@ const newMessagePayload = {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
       {loading ? (
-          <View style={styles.centerLoading}>
-              <ActivityIndicator size="large" color="#B71C1C" />
-          </View>
+        <View style={styles.centerLoading}>
+          <ActivityIndicator size="large" color="#B71C1C" />
+        </View>
       ) : (
-          <FlatList
-            ref={flatListRef}
-            data={messages}
-            renderItem={renderMessage}
-            keyExtractor={item => item.message_id.toString()}
-            contentContainerStyle={styles.messagesList}
-            onContentSizeChange={() =>
-              flatListRef.current?.scrollToEnd({ animated: true })
-            }
-            ListEmptyComponent={
-                <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>No messages yet. Start chatting!</Text>
-                </View>
-            }
-          />
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          renderItem={renderMessage}
+          keyExtractor={item => item.message_id.toString()}
+          contentContainerStyle={styles.messagesList}
+          onContentSizeChange={() =>
+            flatListRef.current?.scrollToEnd({ animated: true })
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No messages yet. Start chatting!</Text>
+            </View>
+          }
+        />
       )}
 
       {isAI && quickActions.length > 0 && (
         <View style={styles.quickActionsContainer}>
-            <ScrollView
+          <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.quickActionsContent}
-            >
+          >
             {quickActions.map(action => (
-                <TouchableOpacity
+              <TouchableOpacity
                 key={action.id}
                 style={styles.quickActionButton}
                 onPress={() => handleQuickAction(action)}
-                >
+              >
                 <Text style={styles.quickActionText}>{action.text}</Text>
-                </TouchableOpacity>
+              </TouchableOpacity>
             ))}
-            </ScrollView>
+          </ScrollView>
         </View>
       )}
 
@@ -347,22 +349,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
   },
   centerLoading: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center'
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   messagesList: {
     padding: 16,
     paddingBottom: 20
   },
   emptyContainer: {
-      alignItems: 'center',
-      marginTop: 50,
-      opacity: 0.5
+    alignItems: 'center',
+    marginTop: 50,
+    opacity: 0.5
   },
   emptyText: {
-      fontSize: 16,
-      color: '#666'
+    fontSize: 16,
+    color: '#666'
   },
   messageContainer: {
     marginBottom: 12,

@@ -141,7 +141,7 @@ class MarketplaceModel {
       SELECT 
         p.*,
         u.id as seller_id,
-        s.name as seller_name,
+        COALESCE(s.name, u.email, 'User') as seller_name,
         u.email as seller_email
       FROM products p
       JOIN user u ON p.seller_id = u.id

@@ -11,16 +11,17 @@ exports.getMessages = async (req, res) => {
   try {
     const { conversationId } = req.params;
     const { userId, limit = 50, offset = 0 } = req.query;
-    
+
     const messages = await query(`
       SELECT 
         m.*,
-        u.username as sender_name,
-        u.full_name as sender_full_name,
-        u.profile_picture as sender_picture
+        COALESCE(s.name, u.email, 'User') as sender_name,
+        COALESCE(s.name, u.email, 'User') as sender_full_name,
+        s.profile_image as sender_picture
       FROM messages m
-      LEFT JOIN user u ON m.sender_id = u.user_id
-      WHERE m.conversation_id = ? AND m.is_deleted = FALSE
+      JOIN user u ON m.sender_id = u.id
+      LEFT JOIN students s ON m.sender_id = s.user_id
+      WHERE m.conversation_id = ? 
       ORDER BY m.created_at ASC
       LIMIT ? OFFSET ?
     `, [conversationId, parseInt(limit), parseInt(offset)]);
@@ -29,7 +30,7 @@ exports.getMessages = async (req, res) => {
     if (userId) {
       await query(`
         UPDATE messages 
-        SET is_read = TRUE, read_at = CURRENT_TIMESTAMP
+        SET is_read = TRUE
         WHERE conversation_id = ? AND sender_id != ? AND is_read = FALSE
       `, [conversationId, userId]);
     }
@@ -117,13 +118,13 @@ exports.sendMessage = async (req, res) => {
 exports.markAsRead = async (req, res) => {
   try {
     const { messageId } = req.params;
-    
+
     await query(`
       UPDATE messages 
-      SET is_read = TRUE, read_at = CURRENT_TIMESTAMP
+      SET is_read = TRUE
       WHERE message_id = ?
     `, [messageId]);
-    
+
     res.json({ success: true });
   } catch (error) {
     console.error('Error marking message as read:', error);
@@ -135,23 +136,23 @@ exports.deleteMessage = async (req, res) => {
   try {
     const { messageId } = req.params;
     const { userId } = req.query;
-    
+
     const message = await query('SELECT sender_id FROM messages WHERE message_id = ?', [messageId]);
-    
+
     if (message.length === 0) {
       return res.status(404).json({ error: 'Message not found' });
     }
-    
+
     if (message[0].sender_id !== parseInt(userId)) {
       return res.status(403).json({ error: 'Not authorized to delete this message' });
     }
-    
+
     await query(`
       UPDATE messages 
       SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP, message_text = 'This message was deleted'
       WHERE message_id = ?
     `, [messageId]);
-    
+
     res.json({ success: true, message: 'Message deleted' });
   } catch (error) {
     console.error('Error deleting message:', error);
@@ -163,32 +164,34 @@ exports.searchMessages = async (req, res) => {
   try {
     const { userId } = req.params;
     const { query: searchQuery } = req.query;
-    
+
     if (!searchQuery || searchQuery.trim().length < 2) {
       return res.json([]);
     }
-    
+
     const results = await query(`
       SELECT 
         m.*,
         c.conversation_id,
-        u.username as sender_name,
+        COALESCE(s.name, u.email, 'User') as sender_name,
         CASE 
-          WHEN c.participant_1_id = ? THEN u2.username
-          ELSE u1.username
+          WHEN c.participant_1_id = ? THEN COALESCE(s2.name, u2.email, 'User')
+          ELSE COALESCE(s1.name, u1.email, 'User')
         END as other_username
       FROM messages m
       JOIN conversations c ON m.conversation_id = c.conversation_id
-      JOIN user u ON m.sender_id = u.user_id
-      LEFT JOIN user u1 ON c.participant_1_id = u1.user_id
-      LEFT JOIN user u2 ON c.participant_2_id = u2.user_id
+      JOIN user u ON m.sender_id = u.id
+      LEFT JOIN students s ON m.sender_id = s.user_id
+      LEFT JOIN user u1 ON c.participant_1_id = u1.id
+      LEFT JOIN user u2 ON c.participant_2_id = u2.id
+      LEFT JOIN students s1 ON c.participant_1_id = s1.user_id
+      LEFT JOIN students s2 ON c.participant_2_id = s2.user_id
       WHERE (c.participant_1_id = ? OR c.participant_2_id = ?)
-      AND m.is_deleted = FALSE
       AND MATCH(m.message_text) AGAINST(? IN NATURAL LANGUAGE MODE)
       ORDER BY m.created_at DESC
       LIMIT 50
     `, [userId, userId, userId, searchQuery]);
-    
+
     res.json(results);
   } catch (error) {
     console.error('Error searching messages:', error);

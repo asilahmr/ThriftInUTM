@@ -217,5 +217,16 @@ export const walletApi = {
   },
 };
 
+export const chatApi = {
+  // Create conversation
+  createConversation: async (participant1Id, participant2Id) => {
+    const response = await api.post('/api/conversations', {
+      participant_1_id: participant1Id,
+      participant_2_id: participant2Id,
+    });
+    return response;
+  },
+};
+
 
 export default api;

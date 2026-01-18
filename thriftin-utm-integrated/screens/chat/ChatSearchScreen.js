@@ -8,13 +8,13 @@ import {
   StyleSheet,
   ActivityIndicator
 } from 'react-native';
-import axios from 'axios';
-import API_BASE from '../../config';
-const API_URL = `${API_BASE}/api`;
+import api from '../../utils/api';
+// import API_BASE from '../../config';
+// const API_URL = `${API_BASE}/api`;
 
 const ChatSearchScreen = ({ navigation, route }) => {
   const userId = route.params?.userId || 2;
-  
+
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -29,7 +29,7 @@ const ChatSearchScreen = ({ navigation, route }) => {
     setSearched(true);
 
     try {
-      const response = await axios.get(`${API_URL}/messages/search/${userId}`, {
+      const response = await api.get(`/api/messages/search/${userId}`, {
         params: { query: searchQuery.trim() }
       });
       setSearchResults(response.data);
@@ -43,8 +43,8 @@ const ChatSearchScreen = ({ navigation, route }) => {
   const highlightText = (text, query) => {
     if (!query) return text;
     const parts = text.split(new RegExp(`(${query})`, 'gi'));
-    return parts.map((part, index) => 
-      part.toLowerCase() === query.toLowerCase() 
+    return parts.map((part, index) =>
+      part.toLowerCase() === query.toLowerCase()
         ? <Text key={index} style={styles.highlight}>{part}</Text>
         : part
     );
@@ -54,7 +54,7 @@ const ChatSearchScreen = ({ navigation, route }) => {
     const date = new Date(timestamp);
     const now = new Date();
     const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return `${diffDays} days ago`;

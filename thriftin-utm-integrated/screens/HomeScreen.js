@@ -106,7 +106,7 @@ const HomeScreen = ({ navigation }) => {
         action="VIEW_PRODUCT"
         onAllowed={() => handleProductPress(item)}
       >
-        <TouchableOpacity style={styles.productCard} activeOpacity={0.7}>
+        <View style={styles.productCard}>
           <Image source={{ uri: imageUrl }} style={styles.productImage} />
           <View style={styles.productInfo}>
             <Text style={styles.productName} numberOfLines={2}>
@@ -118,7 +118,7 @@ const HomeScreen = ({ navigation }) => {
             </Text>
             <Text style={styles.productCondition}>{item.condition}</Text>
           </View>
-        </TouchableOpacity>
+        </View>
       </TransactionGuard>
     );
   };
@@ -139,7 +139,7 @@ const HomeScreen = ({ navigation }) => {
         action="VIEW_PRODUCT"
         onAllowed={() => handleProductPress(item)}
       >
-        <TouchableOpacity style={styles.recommendationCard}>
+        <View style={styles.recommendationCard}>
           <Image source={{ uri: imageUrl }} style={styles.recommendationImage} />
           <View style={styles.recommendationInfo}>
             <Text style={styles.recommendationName} numberOfLines={2}>
@@ -149,7 +149,7 @@ const HomeScreen = ({ navigation }) => {
               RM {parseFloat(item.price).toFixed(2)}
             </Text>
           </View>
-        </TouchableOpacity>
+        </View>
       </TransactionGuard>
     );
   };

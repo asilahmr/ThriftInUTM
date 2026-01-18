@@ -50,6 +50,9 @@ const walletRoutes = require('./routes/walletRoutes');
 const salesRoutes = require('./routes/salesRoutes');
 const buyingRoutes = require('./routes/buyerRoutes');
 
+const conversationRoutes = require('./routes/conversations');
+const messageRoutes = require('./routes/messages');
+
 const analyticsRoutes = require('./routes/analyticsRoutes');
 
 // ==================== MOUNT ROUTES ====================
@@ -69,6 +72,8 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/sales', salesRoutes);
 app.use('/api/buying', buyingRoutes);
+app.use('/api/conversations', conversationRoutes);
+app.use('/api/messages', messageRoutes);
 
 // ==================== DATABASE CONNECTION ====================
 const db = mysql.createPool({

@@ -12,10 +12,10 @@ import {
   ActivityIndicator,
   RefreshControl
 } from 'react-native';
-import axios from 'axios';
+import api from '../../utils/api';
 import NotificationBadge from '../../components/notifications/NotificationBadge';
-import API_BASE from '../../config';
-const API_URL = `${API_BASE}/api`; // Change to your IP
+// import API_BASE from '../../config';
+// const API_URL = `${API_BASE}/api`;
 
 const ChatListScreen = ({ navigation, route }) => {
   const [conversations, setConversations] = useState([]);
@@ -33,7 +33,7 @@ const ChatListScreen = ({ navigation, route }) => {
       const currentUserId = 2;
 
       // 1. Get real data from database
-      const response = await axios.get(`${API_URL}/api/conversations/${currentUserId}`);
+      const response = await api.get(`/api/conversations/${currentUserId}`);
 
       // 2. Update the state with REAL data
       setConversations(response.data);
@@ -128,7 +128,7 @@ const ChatListScreen = ({ navigation, route }) => {
 
   const fetchUnreadNotificationCount = async () => {
     try {
-      const response = await axios.get(`${API_URL}/notifications/${userId}/unread-count`);
+      const response = await api.get(`/api/notifications/${userId}/unread-count`);
       setUnreadNotificationCount(response.data.count);
     } catch (error) {
       console.error('Error fetching notification count:', error);
