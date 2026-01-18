@@ -9,6 +9,20 @@ import { COLORS, API_BASE_URL } from '../utils/constants';
 
 const { width } = Dimensions.get('window');
 
+const ProductImage = ({ uri }) => {
+  const [error, setError] = useState(false);
+  const source = (!error && uri) ? { uri } : { uri: 'https://via.placeholder.com/400' };
+
+  return (
+    <Image
+      source={source}
+      style={styles.image}
+      resizeMode="cover"
+      onError={() => setError(true)}
+    />
+  );
+};
+
 const ProductDetailsScreen = ({ route, navigation }) => {
   const { productId } = route.params;
   const [product, setProduct] = useState(null);
@@ -117,11 +131,10 @@ const ProductDetailsScreen = ({ route, navigation }) => {
           >
             {images.length > 0 ? (
               images.map((img, index) => (
-                <Image
+                <ProductImage
                   key={index}
-                  source={{ uri: `${API_BASE_URL.replace('/api', '')}${img.image_url}` }}
-                  style={styles.image}
-                  resizeMode="cover"
+                  uri={`${API_BASE_URL.replace('/api', '')}${img.image_url}`}
+                  index={index}
                 />
               ))
             ) : (

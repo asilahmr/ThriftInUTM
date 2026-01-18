@@ -2,7 +2,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, RefreshControl, FlatList
+  ActivityIndicator, RefreshControl, FlatList, Platform, StatusBar, SafeAreaView
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { walletApi } from '../api/productApi';
@@ -33,8 +33,8 @@ const MyWalletScreen = ({ navigation }) => {
       ]);
 
       console.log('✅ Wallet data loaded');
-      setWalletSummary(summaryResponse.data);
-      setTransactions(transactionsResponse.data || []);
+      setWalletSummary(summaryResponse.data.data);
+      setTransactions(transactionsResponse.data.data || []);
     } catch (error) {
       console.error('❌ Fetch wallet error:', error);
       setErrorMsg(error.response?.data?.message || 'Failed to connect');
@@ -207,6 +207,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   centered: {
     flex: 1,

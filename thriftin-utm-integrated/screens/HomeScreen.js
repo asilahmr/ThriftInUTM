@@ -93,13 +93,18 @@ const HomeScreen = ({ navigation }) => {
   /* =========================
      Product Card (PROTECTED)
      ========================= */
-  const renderProductCard = ({ item }) => {
-    const primaryImage =
-      item.images?.find(img => img.is_primary) || item.images?.[0];
+  const ProductCard = ({ item }) => {
+    const [imageError, setImageError] = useState(false);
 
-    const imageUrl = primaryImage
+    const primaryImage = item.images?.find(img => img.is_primary) || item.images?.[0];
+    const serverUrl = primaryImage?.image_url
       ? `${API_BASE_URL.replace('/api', '')}${primaryImage.image_url}`
-      : 'https://via.placeholder.com/150';
+      : null;
+
+    // Use server URL, or placeholder if error/missing
+    const displaySource = (serverUrl && !imageError)
+      ? { uri: serverUrl }
+      : { uri: 'https://via.placeholder.com/150' };
 
     return (
       <TransactionGuard
@@ -107,7 +112,11 @@ const HomeScreen = ({ navigation }) => {
         onAllowed={() => handleProductPress(item)}
       >
         <View style={styles.productCard}>
-          <Image source={{ uri: imageUrl }} style={styles.productImage} />
+          <Image
+            source={displaySource}
+            style={styles.productImage}
+            onError={() => setImageError(true)}
+          />
           <View style={styles.productInfo}>
             <Text style={styles.productName} numberOfLines={2}>
               {item.name}
@@ -123,16 +132,25 @@ const HomeScreen = ({ navigation }) => {
     );
   };
 
+  const renderProductCard = ({ item }) => <ProductCard item={item} />;
+
   /* =========================
      Recommendation Card
      ========================= */
-  const renderRecommendationCard = ({ item }) => {
-    const primaryImage =
-      item.images?.find(img => img.is_primary) || item.images?.[0];
+  /* =========================
+     Recommendation Card
+     ========================= */
+  const RecommendationCard = ({ item }) => {
+    const [imageError, setImageError] = useState(false);
 
-    const imageUrl = primaryImage
+    const primaryImage = item.images?.find(img => img.is_primary) || item.images?.[0];
+    const serverUrl = primaryImage?.image_url
       ? `${API_BASE_URL.replace('/api', '')}${primaryImage.image_url}`
-      : 'https://via.placeholder.com/150';
+      : null;
+
+    const displaySource = (serverUrl && !imageError)
+      ? { uri: serverUrl }
+      : { uri: 'https://via.placeholder.com/150' };
 
     return (
       <TransactionGuard
@@ -140,7 +158,11 @@ const HomeScreen = ({ navigation }) => {
         onAllowed={() => handleProductPress(item)}
       >
         <View style={styles.recommendationCard}>
-          <Image source={{ uri: imageUrl }} style={styles.recommendationImage} />
+          <Image
+            source={displaySource}
+            style={styles.recommendationImage}
+            onError={() => setImageError(true)}
+          />
           <View style={styles.recommendationInfo}>
             <Text style={styles.recommendationName} numberOfLines={2}>
               {item.name}
@@ -153,6 +175,8 @@ const HomeScreen = ({ navigation }) => {
       </TransactionGuard>
     );
   };
+
+  const renderRecommendationCard = ({ item }) => <RecommendationCard item={item} />;
 
   if (loading && products.length === 0) {
     return (

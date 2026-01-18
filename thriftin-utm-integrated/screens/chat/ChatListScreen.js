@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   RefreshControl
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../utils/api';
 import NotificationBadge from '../../components/notifications/NotificationBadge';
 // import API_BASE from '../../config';
@@ -24,111 +25,80 @@ const ChatListScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  const [mappedUserId, setMappedUserId] = useState(route.params?.userId || null);
 
-  const userId = route.params?.userId || 2;
-
-  const fetchConversations = async () => {
+  const fetchUserData = async () => {
     try {
-      // Use your actual user ID here (or retrieve it from storage)
-      const currentUserId = 2;
-
-      // 1. Get real data from database
-      const response = await api.get(`/api/conversations/${currentUserId}`);
-
-      // 2. Update the state with REAL data
-      setConversations(response.data);
-
+      if (route.params?.userId) {
+        setMappedUserId(route.params.userId);
+        return;
+      }
+      const userData = await AsyncStorage.getItem('user');
+      if (userData) {
+        const user = JSON.parse(userData);
+        setMappedUserId(user.id);
+      }
     } catch (error) {
-      console.error("Error fetching chats:", error);
+      console.error('Failed to load user data:', error);
     }
   };
-  // ... all your existing useEffect and functions remain the same ...
+
+  const fetchConversations = async (idToFetch) => {
+    if (!idToFetch) return;
+    setLoading(true);
+    try {
+      console.log('Fetching conversations for user:', idToFetch);
+      const response = await api.get(`/api/conversations/${idToFetch}`);
+      console.log('Conversations loaded:', response.data.length);
+      setConversations(response.data);
+    } catch (error) {
+      console.error("Error fetching chats:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    loadMockData();
-    fetchUnreadNotificationCount();
+    fetchUserData();
   }, []);
+
+  useEffect(() => {
+    if (mappedUserId) {
+      fetchConversations(mappedUserId);
+      fetchUnreadNotificationCount(mappedUserId);
+    }
+  }, [mappedUserId]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
         <NotificationBadge
           count={unreadNotificationCount}
-          onPress={() => navigation.navigate('NotificationList', { userId })}
+          onPress={() => navigation.navigate('NotificationList', { userId: mappedUserId })}
         />
       ),
     });
-  }, [navigation, unreadNotificationCount, userId]);
+  }, [navigation, unreadNotificationCount, mappedUserId]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      fetchUnreadNotificationCount();
+      fetchUserData(); // Re-check user data on focus just in case
+      if (mappedUserId) {
+        fetchConversations(mappedUserId);
+        fetchUnreadNotificationCount(mappedUserId);
+      }
     });
     return unsubscribe;
-  }, [navigation]);
+  }, [navigation, mappedUserId]);
 
   useEffect(() => {
     filterConversations();
   }, [searchQuery, conversations]);
 
-  const loadMockData = () => {
-    const mockConversations = [
-      {
-        conversation_id: 1,
-        other_user_id: 1,
-        other_username: 'AI Shopping Assistant',
-        other_profile_picture: null,
-        is_ai_conversation: true,
-        other_is_online: true,
-        other_last_seen: null,
-        last_message: 'Hello! I\'m your AI Shopping Assistant 👋',
-        last_message_time: new Date().toISOString(),
-        unread_count: 0
-      },
-      {
-        conversation_id: 2,
-        other_user_id: 3,
-        other_username: 'Ahmad Rahman',
-        other_profile_picture: null,
-        is_ai_conversation: false,
-        other_is_online: false,
-        other_last_seen: new Date(Date.now() - 7200000).toISOString(),
-        last_message: 'Sure! Let me know when you\'re free.',
-        last_message_time: new Date(Date.now() - 3600000).toISOString(),
-        unread_count: 0
-      },
-      {
-        conversation_id: 3,
-        other_user_id: 4,
-        other_username: 'Sarah Lee',
-        other_profile_picture: null,
-        is_ai_conversation: false,
-        other_is_online: true,
-        other_last_seen: null,
-        last_message: 'The desk is in great condition!',
-        last_message_time: new Date(Date.now() - 7200000).toISOString(),
-        unread_count: 1
-      },
-      {
-        conversation_id: 4,
-        other_user_id: 5,
-        other_username: 'Kumar Singh',
-        other_profile_picture: null,
-        is_ai_conversation: false,
-        other_is_online: false,
-        other_last_seen: new Date(Date.now() - 86400000).toISOString(),
-        last_message: 'Yes, it is still available',
-        last_message_time: new Date(Date.now() - 86400000).toISOString(),
-        unread_count: 0
-      }
-    ];
-
-    setConversations(mockConversations);
-    setLoading(false);
-  };
-
-  const fetchUnreadNotificationCount = async () => {
+  const fetchUnreadNotificationCount = async (idToFetch) => {
+    if (!idToFetch) return;
     try {
-      const response = await api.get(`/api/notifications/${userId}/unread-count`);
+      const response = await api.get(`/api/notifications/${idToFetch}/unread-count`);
       setUnreadNotificationCount(response.data.count);
     } catch (error) {
       console.error('Error fetching notification count:', error);
@@ -137,8 +107,10 @@ const ChatListScreen = ({ navigation, route }) => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchConversations();
-    await fetchUnreadNotificationCount();
+    if (mappedUserId) {
+      await fetchConversations(mappedUserId);
+      await fetchUnreadNotificationCount(mappedUserId);
+    }
     setRefreshing(false);
   };
 
@@ -206,7 +178,7 @@ const ChatListScreen = ({ navigation, route }) => {
         otherUserId: item.other_user_id,
         otherUsername: item.other_username,
         isAI: item.is_ai_conversation,
-        userId: userId
+        userId: mappedUserId
       })}
     >
       <View style={styles.avatarContainer}>
@@ -296,7 +268,7 @@ const ChatListScreen = ({ navigation, route }) => {
       <View style={styles.quickAccessBar}>
         <TouchableOpacity
           style={styles.quickAccessButton}
-          onPress={() => navigation.navigate('HelpCenter', { userId })}
+          onPress={() => navigation.navigate('HelpCenter', { userId: mappedUserId })}
         >
           <Text style={styles.quickAccessIcon}>🆘</Text>
           <Text style={styles.quickAccessText}>Help Center</Text>
@@ -304,7 +276,7 @@ const ChatListScreen = ({ navigation, route }) => {
 
         <TouchableOpacity
           style={styles.quickAccessButton}
-          onPress={() => navigation.navigate('Feedback', { userId })}
+          onPress={() => navigation.navigate('Feedback', { userId: mappedUserId })}
         >
           <Text style={styles.quickAccessIcon}>💬</Text>
           <Text style={styles.quickAccessText}>Feedback</Text>
