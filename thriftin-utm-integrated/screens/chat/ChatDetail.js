@@ -192,15 +192,24 @@ const ChatDetailScreen = ({ navigation, route }) => {
   };
 
   // ... [Keep your existing menu handlers: handleReport, handleBlock] ...
-  const handleReport = () => {
-    setShowMenu(false);
-    Alert.alert("Reported", "User has been reported.");
-  };
+const handleReport = () => {
+  setShowMenu(false);
+  navigation.navigate('ReportUser', {
+    reporterId: userId,
+    reportedUserId: otherUserId,
+    reportedUsername: otherUsername,
+    conversationId: conversationId
+  });
+};
 
-  const handleBlock = () => {
-    setShowMenu(false);
-    Alert.alert("Blocked", "User has been blocked.");
-  };
+const handleBlock = () => {
+  setShowMenu(false);
+  navigation.navigate('BlockUser', {
+    blockerId: userId,
+    blockedId: otherUserId,
+    blockedUsername: otherUsername
+  });
+};
 
   const renderMessage = ({ item }) => {
     const isMyMessage = item.sender_id === userId;

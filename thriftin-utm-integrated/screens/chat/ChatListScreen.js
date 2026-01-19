@@ -27,36 +27,58 @@ const ChatListScreen = ({ navigation, route }) => {
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [mappedUserId, setMappedUserId] = useState(route.params?.userId || null);
 
-  const fetchUserData = async () => {
-    try {
-      if (route.params?.userId) {
-        setMappedUserId(route.params.userId);
-        return;
-      }
-      const userData = await AsyncStorage.getItem('user');
-      if (userData) {
-        const user = JSON.parse(userData);
-        setMappedUserId(user.id);
-      }
-    } catch (error) {
-      console.error('Failed to load user data:', error);
+const fetchUserData = async () => {
+  try {
+    console.log('🔍 Checking route params:', route.params?.userId);
+    
+    if (route.params?.userId) {
+      console.log('✅ Using userId from route params:', route.params.userId);
+      setMappedUserId(route.params.userId);
+      return;
     }
-  };
+    
+    const userData = await AsyncStorage.getItem('user');
+    console.log('📦 AsyncStorage user data:', userData);
+    
+    if (userData) {
+      const user = JSON.parse(userData);
+      console.log('✅ Parsed user:', user);
+      console.log('✅ Setting userId:', user.id);
+      setMappedUserId(user.id);
+    } else {
+      console.log('❌ No user data in AsyncStorage');
+    }
+  } catch (error) {
+    console.error('❌ Failed to load user data:', error);
+  }
+};
 
-  const fetchConversations = async (idToFetch) => {
-    if (!idToFetch) return;
-    setLoading(true);
-    try {
-      console.log('Fetching conversations for user:', idToFetch);
-      const response = await api.get(`/api/conversations/${idToFetch}`);
-      console.log('Conversations loaded:', response.data.length);
-      setConversations(response.data);
-    } catch (error) {
-      console.error("Error fetching chats:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+const fetchConversations = async (idToFetch) => {
+  if (!idToFetch) {
+    console.log('❌ No userId provided to fetchConversations');
+    return;
+  }
+  
+  setLoading(true);
+  try {
+    console.log('🔍 Fetching conversations for user:', idToFetch);
+    console.log('📡 API URL:', `${api.defaults.baseURL}/api/conversations/${idToFetch}`);
+    
+    const response = await api.get(`/api/conversations/${idToFetch}`);
+    
+    console.log('✅ API Response Status:', response.status);
+    console.log('✅ Conversations loaded:', response.data.length);
+    console.log('📋 Conversation data:', JSON.stringify(response.data, null, 2));
+    
+    setConversations(response.data);
+  } catch (error) {
+    console.error("❌ Error fetching chats:", error);
+    console.error("❌ Error details:", error.response?.data);
+    console.error("❌ Error status:", error.response?.status);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchUserData();

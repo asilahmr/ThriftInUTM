@@ -55,7 +55,7 @@ exports.sendMessage = async (req, res) => {
     // Update conversation timestamp
     await query(`
       UPDATE conversations 
-      SET updated_at = CURRENT_TIMESTAMP, last_message_at = CURRENT_TIMESTAMP
+      SET updated_at = CURRENT_TIMESTAMP
       WHERE conversation_id = ?
     `, [conversation_id]);
 

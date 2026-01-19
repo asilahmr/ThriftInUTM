@@ -3,7 +3,7 @@ const mysql = require('mysql2/promise');
 require('dotenv').config();
 
 const dbConfig = {
-  host: '127.0.0.1',
+  host: 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD !== undefined ? process.env.DB_PASSWORD : 'admin123',
   database: process.env.DB_NAME || 'thriftin_utm',
