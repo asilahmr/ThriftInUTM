@@ -113,7 +113,7 @@ router.get('/admin', requireAdmin, async (req, res) => {
     `;
 
     let topSellersQuery = `
-      SELECT s.name, COUNT(oi.order_item_id) AS sold_count, SUM(oi.product_price) AS revenue
+      SELECT oi.seller_id, COALESCE(s.name, u.email) AS name, COUNT(oi.order_item_id) AS sold_count, SUM(oi.product_price) AS revenue
       FROM order_items oi
       JOIN user u ON oi.seller_id = u.id
       LEFT JOIN students s ON u.id = s.user_id
@@ -270,6 +270,38 @@ router.get('/user/:userId/category/:category', async (req, res) => {
     }
 });
 
+// Admin: Get all items sold by a specific user (filtered)
+router.get('/user/:userId/items', requireAdmin, async (req, res) => {
+    const { userId } = req.params;
+    const { month, year, type } = req.query;
+
+    const filter = buildDateFilter(req, 'o.order_date');
+
+    const query = `
+        SELECT 
+            o.order_id, 
+            p.name, 
+            p.category,
+            oi.product_price AS price, 
+            o.order_date as date
+        FROM order_items oi
+        JOIN products p ON oi.product_id = p.product_id
+        JOIN orders o ON oi.order_id = o.order_id
+        WHERE oi.seller_id = ? 
+        AND o.order_status = 'completed' 
+        ${filter.clause}
+        ORDER BY o.order_date DESC
+    `;
+
+    try {
+        const results = await db.query(query, [userId, ...filter.params]);
+        res.json(results);
+    } catch (err) {
+        console.error('Get sold items list error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Global products by category for admin
 router.get('/category/:category', requireAdmin, async (req, res) => {
     const { category } = req.params;
@@ -303,11 +335,15 @@ router.get('/sold/:orderId', async (req, res) => {
                 oi.product_name, oi.product_price, oi.product_category, oi.product_condition,
                 oi.seller_id, o.buyer_id,
                 s.name AS buyer_name, u.email AS buyer_email,
-                s.matric AS buyer_matric
+                s.matric AS buyer_matric,
+                COALESCE(seller_s.name, seller_u.email) AS seller_name,
+                seller_u.email AS seller_email
             FROM orders o
             JOIN order_items oi ON o.order_id = oi.order_id
             JOIN user u ON o.buyer_id = u.id
             LEFT JOIN students s ON u.id = s.user_id
+            JOIN user seller_u ON oi.seller_id = seller_u.id
+            LEFT JOIN students seller_s ON seller_u.id = seller_s.user_id
             WHERE o.order_id = ?
         `;
 
