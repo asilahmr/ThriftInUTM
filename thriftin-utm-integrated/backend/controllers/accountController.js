@@ -112,16 +112,25 @@ const submitUserReport = async (req, res) => {
     const {
       reportedUserId,
       reason,
-      description,
-      evidencePath,
-      evidenceType
+      description
     } = req.body;
     const reporterId = req.user.id;
+
+    // 🔧 FIX: Get evidence from uploaded file
+    let evidencePath = null;
+    let evidenceType = null;
+    
+    if (req.file) {
+      evidencePath = req.file.path;
+      evidenceType = req.file.mimetype;
+      console.log('📎 Evidence uploaded:', evidencePath);
+    }
 
     console.log('\n=== SUBMITTING REPORT ===');
     console.log('Reporter ID:', reporterId);
     console.log('Reported User ID:', reportedUserId);
     console.log('Reason:', reason);
+    console.log('Has Evidence:', !!evidencePath);
 
     // Get reporter matric
     const [reporter] = await connection.query(
@@ -155,8 +164,8 @@ const submitUserReport = async (req, res) => {
         reported[0]?.matric,
         reason,
         description,
-        evidencePath || null,
-        evidenceType || null
+        evidencePath,
+        evidenceType
       ]
     );
 
@@ -423,6 +432,7 @@ const getUserDetails = async (req, res) => {
   }
 };
 
+// 🔧 FIX: Consistent use of db.query
 const getUserReports = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -564,7 +574,7 @@ const getReportDetails = async (req, res) => {
 
 module.exports = {
   checkUserRestrictions,
-  submitUserReport,  // NEW: Auto-restrict endpoint
+  submitUserReport,
   suspendUserTemporarily,
   suspendUserPermanently,
   reinstateUser,

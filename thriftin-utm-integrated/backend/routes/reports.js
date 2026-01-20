@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const reportController = require('../controllers/reportController');
+const { upload } = require('../middleware/upload'); 
+
+router.post('/submit', upload.single('evidence'), reportController.submitReport);
 
 router.post('/user', reportController.reportUser);
 router.post('/block', reportController.blockUser);

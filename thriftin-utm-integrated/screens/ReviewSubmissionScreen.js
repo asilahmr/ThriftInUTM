@@ -102,7 +102,7 @@ const ReviewSubmissionScreen = ({ navigation, route }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#c85959" />
+      <StatusBar barStyle="light-content" backgroundColor="#D32F2F" />
       
       <View style={styles.header}>
         <TouchableOpacity
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#c85959',
+    backgroundColor: '#D32F2F',
     paddingVertical: 20,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 20,

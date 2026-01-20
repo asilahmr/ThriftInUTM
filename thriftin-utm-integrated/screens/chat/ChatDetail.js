@@ -211,15 +211,28 @@ const ChatDetailScreen = ({ navigation, route }) => {
     sendMessage(action.text);
   };
 
-  const handleReport = () => {
-    setShowMenu(false);
-    navigation.navigate('ReportUser', {
-      reporterId: userId,
+const handleReport = () => {
+  console.log('🔴 handleReport clicked!');
+  console.log('📋 Navigation object:', navigation);
+  console.log('📋 otherUserId:', otherUserId);
+  console.log('📋 otherUsername:', otherUsername);
+  console.log('📋 userId:', userId);
+  
+  setShowMenu(false);
+  
+  try {
+    navigation.navigate('StudentReportUser', {
       reportedUserId: otherUserId,
-      reportedUsername: otherUsername,
-      conversationId: conversationId
+      reportedUserName: otherUsername,
+      reportedUserMatric: 'N/A',
+      currentUserId: userId,
+      currentUserMatric: 'N/A'
     });
-  };
+    console.log('✅ Navigation called successfully');
+  } catch (error) {
+    console.error('❌ Navigation error:', error);
+  }
+};
 
   const handleBlock = () => {
     setShowMenu(false);

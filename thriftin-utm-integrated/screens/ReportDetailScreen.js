@@ -183,7 +183,7 @@ export default function ReportDetailScreen({ route, navigation }) {
   if (loading) {
     return (
       <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#A94442" />
+        <StatusBar barStyle="light-content" backgroundColor="#D32F2F" />
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -344,18 +344,17 @@ export default function ReportDetailScreen({ route, navigation }) {
 
                 {/* Evidence Section */}
                 <View style={styles.evidenceSection}>
-                  <View style={styles.evidenceHeader}>
-                    <Ionicons name="shield-outline" size={20} color="#DC2626" />
-                    <Text style={styles.evidenceTitle}>Evidence</Text>
-                  </View>
-                  
-                  {report.evidence && report.evidence.length > 0 ? (
-                    report.evidence.map((evidence, index) => (
-                      <View key={index} style={styles.evidenceContent}>
-                        {evidence.fileType && evidence.fileType.startsWith('image/') ? (
+                    <View style={styles.evidenceHeader}>
+                      <Ionicons name="shield-outline" size={20} color="#DC2626" />
+                      <Text style={styles.evidenceTitle}>Evidence</Text>
+                    </View>
+  
+                    {report.evidence_path ? (
+                     <View style={styles.evidenceContent}>
+                        {report.evidence_type && report.evidence_type.startsWith('image/') ? (
                           <View style={styles.evidenceImageContainer}>
-                            <Image 
-                              source={{ uri: `${api.defaults.baseURL}/${evidence.filePath}` }}
+                           <Image 
+                              source={{ uri: `${api.defaults.baseURL}/${report.evidence_path}` }}
                               style={styles.evidenceImage}
                               resizeMode="contain"
                             />
@@ -368,18 +367,21 @@ export default function ReportDetailScreen({ route, navigation }) {
                           <View style={styles.evidenceFileContainer}>
                             <Ionicons name="document-outline" size={20} color="#6B7280" />
                             <Text style={styles.evidenceFileName}>
-                              {evidence.filePath.split('/').pop()}
+                              {report.evidence_path.split('/').pop()}
+                            </Text>
+                            <Text style={styles.evidenceFileType}>
+                              {report.evidence_type || 'Unknown type'}
                             </Text>
                           </View>
                         )}
                       </View>
-                    ))
-                  ) : (
-                    <View style={styles.noEvidenceContainer}>
-                      <Text style={styles.noEvidenceText}>No evidence</Text>
-                    </View>
-                  )}
-                </View>
+                    ) : (
+                      <View style={styles.noEvidenceContainer}>
+                        <Ionicons name="alert-circle-outline" size={24} color="#9CA3AF" />
+                        <Text style={styles.noEvidenceText}>No evidence provided</Text>
+                      </View>
+                    )}
+                  </View>
 
                 {/* Reporter Info */}
                 <View style={styles.reportFooter}>
@@ -491,7 +493,7 @@ const styles = StyleSheet.create({
     alignItems: 'center' 
   },
   header: {
-    backgroundColor: '#A94442',
+    backgroundColor: '#D32F2F',
     paddingTop: 50, 
     paddingBottom: 20, 
     paddingHorizontal: 20,
