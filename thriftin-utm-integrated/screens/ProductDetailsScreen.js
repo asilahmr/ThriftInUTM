@@ -6,6 +6,8 @@ import {
 } from 'react-native';
 import { marketplaceApi } from '../api/productApi';
 import { COLORS, API_BASE_URL } from '../utils/constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '../utils/api';
 
 const { width } = Dimensions.get('window');
 
@@ -48,27 +50,52 @@ const ProductDetailsScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleContactSeller = () => {
-    if (!product?.seller) return;
+const handleContactSeller = async () => {
+  if (!product?.seller) return;
 
-    Alert.alert(
-      'Contact Seller',
-      `Send email to ${product.seller.name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Send Email',
-          onPress: () => {
-            const subject = encodeURIComponent(`Interested in: ${product.name}`);
-            const body = encodeURIComponent(
-              `Hi ${product.seller.name},\n\nI'm interested in your product "${product.name}" listed on ThriftIn UTM.\n\nPlease let me know if it's still available.\n\nThank you!`
-            );
-            Linking.openURL(`mailto:${product.seller.email}?subject=${subject}&body=${body}`);
-          }
-        }
-      ]
+  try {
+    const userData = await AsyncStorage.getItem('user');
+    if (!userData) {
+      Alert.alert('Error', 'Please login first');
+      return;
+    }
+    const currentUser = JSON.parse(userData);
+
+    // Check if conversation exists
+    const response = await api.get(`/api/conversations/${currentUser.id}`);
+    const existingConvo = response.data.find(
+      conv => conv.other_user_id === product.seller.user_id
     );
-  };
+
+    if (existingConvo) {
+      navigation.navigate('ChatDetail', {
+        conversationId: existingConvo.conversation_id,
+        otherUserId: product.seller.user_id,
+        otherUsername: product.seller.name,
+        isAI: false,
+        userId: currentUser.id
+      });
+    } else {
+      const createResponse = await api.post('/api/conversations', {
+        participant_1_id: currentUser.id,
+        participant_2_id: product.seller.user_id,
+        is_ai_conversation: false,
+        product_id: product.product_id
+      });
+
+      navigation.navigate('ChatDetail', {
+        conversationId: createResponse.data.conversation_id,
+        otherUserId: product.seller.user_id,
+        otherUsername: product.seller.name,
+        isAI: false,
+        userId: currentUser.id
+      });
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    Alert.alert('Error', 'Failed to start conversation');
+  }
+};
 
   const handleBuyNow = () => {
     if (!product) return;

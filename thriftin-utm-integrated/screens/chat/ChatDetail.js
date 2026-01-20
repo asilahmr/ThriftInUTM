@@ -13,8 +13,8 @@ import {
   ScrollView,
   ActivityIndicator
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../utils/api';
-// const API_URL = `${API_BASE}/api`; // not needed with api instance
 
 const ChatDetailScreen = ({ navigation, route }) => {
   const { conversationId, otherUserId, otherUsername, isAI, userId } = route.params;
@@ -26,22 +26,35 @@ const ChatDetailScreen = ({ navigation, route }) => {
   const [showMenu, setShowMenu] = useState(false);
 
   const flatListRef = useRef(null);
+  const intervalRef = useRef(null);
 
   useEffect(() => {
+    const debugTokens = async () => {
+      const token = await AsyncStorage.getItem('token');
+      const userToken = await AsyncStorage.getItem('userToken');
+      console.log('🔍 Token Debug:');
+      console.log('  token:', token ? 'EXISTS' : 'MISSING');
+      console.log('  userToken:', userToken ? 'EXISTS' : 'MISSING');
+      console.log('  userId:', userId);
+    };
+
+    debugTokens();
     fetchMessages();
 
-    // Set up auto-refresh (Polling) to check for new messages every 3 seconds
-    const intervalId = setInterval(() => {
-      fetchMessages(true); // true = silent refresh (no loading spinner)
-    }, 3000);
+    intervalRef.current = setInterval(() => {
+      fetchMessages(true);
+    }, 20000);
 
     if (isAI) {
       fetchQuickActions();
       checkForGreeting();
     }
 
-    // Cleanup interval on unmount
-    return () => clearInterval(intervalId);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -58,28 +71,21 @@ const ChatDetailScreen = ({ navigation, route }) => {
     });
   }, [navigation, isAI, otherUsername]);
 
-  // const checkForGreeting = async () => {
-  //   if (messages.length === 0 && isAI) {
-  //     // Send greeting strictly after a short delay to ensure UI is ready
-  //     setTimeout(() => sendAIGreeting(), 500);
   const checkForGreeting = async () => {
     if (messages.length === 0 && isAI) {
-      // Send greeting strictly after a short delay to ensure UI is ready
       setTimeout(() => sendAIGreeting(), 500);
     }
   };
 
   const sendAIGreeting = async () => {
-    // Only send if we haven't already
     try {
-      // Check if greeting exists on server first to avoid duplicates
       const check = await api.get(`/api/messages/${conversationId}`);
       if (check.data.length > 0) return;
 
       const greetingMessage = {
         conversation_id: conversationId,
         sender_id: otherUserId,
-        message_text: `Hello! I'm your AI Shopping Assistant 👋\n\nI can help you with:\n• Finding textbooks within your budget\n• Negotiating better prices\n• General buying and selling advice\n\nHow can I assist you today?`,
+        message_text: `Hello! I'm your AI Shopping Assistant 👋\n\nI can help you with:\n• Finding items within your budget\n• Negotiating better prices\n• General buying and selling advice\n\nHow can I assist you today?`,
         message_type: 'text'
       };
       await api.post(`/api/messages`, greetingMessage);
@@ -91,14 +97,24 @@ const ChatDetailScreen = ({ navigation, route }) => {
 
   const fetchMessages = async (silent = false) => {
     try {
+      console.log('🔄 fetchMessages START, silent:', silent);
       if (!silent) setLoading(true);
-      const response = await api.get(
-        `/api/messages/${conversationId}?userId=${userId}`
-      );
+
+      const response = await api.get(`/api/messages/${conversationId}?userId=${userId}&all=true`);
+
+      console.log('📨 API returned:', response.data.length, 'messages');
+      console.log('📨 Latest message ID:', response.data[response.data.length - 1]?.message_id);
+
       setMessages(response.data);
+
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: false });
+      }, 100);
+
       if (!silent) setLoading(false);
+
     } catch (error) {
-      console.error('Error fetching messages:', error);
+      console.error('❌ Error fetching messages:', error);
       if (!silent) setLoading(false);
     }
   };
@@ -109,7 +125,6 @@ const ChatDetailScreen = ({ navigation, route }) => {
       setQuickActions(response.data);
     } catch (error) {
       console.log('Quick actions not available');
-      // Fallback data if API fails
       setQuickActions([
         { id: 1, text: "Check prices" },
         { id: 2, text: "How to buy?" }
@@ -118,88 +133,114 @@ const ChatDetailScreen = ({ navigation, route }) => {
   };
 
   const sendMessage = async (text = inputText) => {
-    if (!text.trim()) return;
+    console.log('📤 sendMessage START with:', text);
+    if (!text.trim()) {
+      console.log('❌ Text is empty, aborting');
+      return;
+    }
 
-    // 1. OPTIMISTIC UPDATE: Show message immediately in UI
-    const tempId = Date.now();
-    const tempMessage = {
-      message_id: tempId,
-      conversation_id: conversationId,
-      sender_id: userId,
-      message_text: text,
-      created_at: new Date().toISOString(),
-      pending: true // Flag to show it's sending
-    };
+    setInputText('');
 
-    setMessages(prev => [...prev, tempMessage]);
-    setInputText(''); // Clear input immediately
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      console.log('⏸️ Paused polling during message send');
+    }
 
-    // 2. Send to Server
     const newMessagePayload = {
       conversation_id: conversationId,
       sender_id: userId,
-      receiver_id: otherUserId, // <--- ADD THIS LINE
       message_text: text,
       message_type: 'text'
     };
 
     try {
       const res = await api.post(`/api/messages`, newMessagePayload);
+      console.log('✅ Got API response');
 
-      setMessages(prev => [...prev.filter(m => !m.pending), res.data.userMessage]);
+      setMessages(prev => {
+        const updated = [...prev];
 
-      if (res.data.aiMessage) {
-        setMessages(prev => [...prev, res.data.aiMessage]);
-      }
+        if (res.data.userMessage) {
+          updated.push(res.data.userMessage);
+          console.log('✅ Added user msg:', res.data.userMessage.message_id);
+        }
 
-      // if (isAI) {
-      //   // Trigger AI Response
-      //   setTimeout(() => getAIResponse(text), 500);
-      // }
-    } catch (error) {
-      console.error('Error sending message:', error);
-      Alert.alert('Failed to send', 'Check your internet connection.');
-      // Remove the optimistic message if it failed
-      setMessages(prev => prev.filter(msg => msg.message_id !== tempId));
-    }
-  };
+        if (res.data.aiMessage) {
+          updated.push(res.data.aiMessage);
+          console.log('✅ Added AI msg:', res.data.aiMessage.message_id);
+          console.log('📝 AI text length:', res.data.aiMessage.message_text?.length);
+          console.log('📄 AI text preview:', res.data.aiMessage.message_text?.substring(0, 100));
+        }
 
-  const getAIResponse = async (userMessage) => {
-    try {
-      // Simulate "typing" by not showing immediately? 
-      // For now, we just wait for server
-      const response = await api.post(`/api/ai/respond`, {
-        message: userMessage,
-        userId: userId
+        console.log('📊 Total messages:', updated.length);
+        return updated;
       });
 
-      const aiMessage = {
-        conversation_id: conversationId,
-        sender_id: otherUserId,
-        message_text: response.data.response,
-        message_type: 'text'
-      };
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 200);
 
-      await api.post(`/api/messages`, aiMessage);
-      fetchMessages(true);
+      if (res.data.aiMessage) {
+        console.log('🤖 AI message received, waiting 8 seconds before resuming polling');
+        setTimeout(() => {
+          intervalRef.current = setInterval(() => {
+            fetchMessages(true);
+          }, 3000);
+          console.log('▶️ Resumed polling after AI response');
+        }, 8000);
+      } else {
+        console.log('👤 Non-AI message, resuming polling immediately');
+        intervalRef.current = setInterval(() => {
+          fetchMessages(true);
+        }, 3000);
+      }
+
     } catch (error) {
-      console.error('Error getting AI response:', error);
+      console.error('❌ Send error:', error);
+      Alert.alert('Failed to send', 'Check your internet connection.');
+
+      intervalRef.current = setInterval(() => {
+        fetchMessages(true);
+      }, 3000);
     }
   };
 
   const handleQuickAction = (action) => {
+    console.log('🔵 Quick Action clicked:', action.text);
+    console.log('🔵 Sending message...');
     sendMessage(action.text);
   };
 
-  // ... [Keep your existing menu handlers: handleReport, handleBlock] ...
-  const handleReport = () => {
-    setShowMenu(false);
-    Alert.alert("Reported", "User has been reported.");
-  };
+const handleReport = () => {
+  console.log('🔴 handleReport clicked!');
+  console.log('📋 Navigation object:', navigation);
+  console.log('📋 otherUserId:', otherUserId);
+  console.log('📋 otherUsername:', otherUsername);
+  console.log('📋 userId:', userId);
+  
+  setShowMenu(false);
+  
+  try {
+    navigation.navigate('StudentReportUser', {
+      reportedUserId: otherUserId,
+      reportedUserName: otherUsername,
+      reportedUserMatric: 'N/A',
+      currentUserId: userId,
+      currentUserMatric: 'N/A'
+    });
+    console.log('✅ Navigation called successfully');
+  } catch (error) {
+    console.error('❌ Navigation error:', error);
+  }
+};
 
   const handleBlock = () => {
     setShowMenu(false);
-    Alert.alert("Blocked", "User has been blocked.");
+    navigation.navigate('BlockUser', {
+      blockerId: userId,
+      blockedId: otherUserId,
+      blockedUsername: otherUsername
+    });
   };
 
   const renderMessage = ({ item }) => {
@@ -216,7 +257,7 @@ const ChatDetailScreen = ({ navigation, route }) => {
           style={[
             styles.messageBubble,
             isMyMessage ? styles.myMessageBubble : styles.otherMessageBubble,
-            item.pending && { opacity: 0.7 } // Dim if sending
+            item.pending && { opacity: 0.7 }
           ]}
         >
           <Text
@@ -248,6 +289,7 @@ const ChatDetailScreen = ({ navigation, route }) => {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      enabled={true}
     >
       {loading ? (
         <View style={styles.centerLoading}>
@@ -258,11 +300,12 @@ const ChatDetailScreen = ({ navigation, route }) => {
           ref={flatListRef}
           data={messages}
           renderItem={renderMessage}
-          keyExtractor={item => item.message_id.toString()}
+          keyExtractor={(item, index) => `${item.message_id}-${index}`}
           contentContainerStyle={styles.messagesList}
-          onContentSizeChange={() =>
-            flatListRef.current?.scrollToEnd({ animated: true })
-          }
+          initialNumToRender={20}
+          maxToRenderPerBatch={20}
+          windowSize={21}
+          removeClippedSubviews={false}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>No messages yet. Start chatting!</Text>
@@ -309,7 +352,6 @@ const ChatDetailScreen = ({ navigation, route }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Menu Modal */}
       <Modal
         visible={showMenu}
         transparent
@@ -368,7 +410,8 @@ const styles = StyleSheet.create({
   },
   messageContainer: {
     marginBottom: 12,
-    maxWidth: '75%',
+    maxWidth: '85%',
+    flexShrink: 1,
   },
   myMessageContainer: {
     alignSelf: 'flex-end',
@@ -379,6 +422,8 @@ const styles = StyleSheet.create({
   messageBubble: {
     padding: 12,
     borderRadius: 16,
+    maxWidth: '100%',
+    flexShrink: 1,
   },
   myMessageBubble: {
     backgroundColor: '#B71C1C',
@@ -391,6 +436,8 @@ const styles = StyleSheet.create({
   messageText: {
     fontSize: 16,
     lineHeight: 22,
+    flexShrink: 1,
+    flexWrap: 'wrap',
   },
   myMessageText: {
     color: '#FFFFFF',
@@ -410,10 +457,12 @@ const styles = StyleSheet.create({
     color: '#999999',
   },
   quickActionsContainer: {
-    height: 60, // Fixed height to prevent jumping
+    height: 60,
     borderTopWidth: 1,
     borderTopColor: '#E0E0E0',
     backgroundColor: '#FFFFFF',
+    zIndex: 999,
+    elevation: 10,
   },
   quickActionsContent: {
     padding: 10,
@@ -440,7 +489,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#E0E0E0',
     alignItems: 'flex-end',
-    paddingBottom: Platform.OS === 'ios' ? 20 : 12, // Extra padding for iPhone home bar
+    paddingBottom: Platform.OS === 'ios' ? 20 : 12,
   },
   input: {
     flex: 1,
@@ -459,7 +508,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 4, // Align with input text
+    marginBottom: 4,
   },
   sendButtonDisabled: {
     backgroundColor: '#CCCCCC',
@@ -476,7 +525,7 @@ const styles = StyleSheet.create({
   menuIcon: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#000000', // Changed to black for visibility if header is white
+    color: '#000000',
   },
   modalOverlay: {
     flex: 1,

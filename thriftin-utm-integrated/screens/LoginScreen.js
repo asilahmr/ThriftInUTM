@@ -156,8 +156,10 @@ export default function LoginScreen({ navigation }) {
       console.log("User type:", response.data.user.userType);
 
       if (response.data.token) {
-        await AsyncStorage.setItem('userToken', response.data.token);
-        await AsyncStorage.setItem('userData', JSON.stringify(response.data.user));
+        // await AsyncStorage.setItem('userToken', response.data.token);
+        // await AsyncStorage.setItem('userData', JSON.stringify(response.data.user));
+        await AsyncStorage.setItem('token', response.data.token);
+        await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
         console.log('Token and user data saved');
       }
 

@@ -10,6 +10,7 @@ const nodemailer = require("nodemailer");
 const path = require('path');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const aiRoutes = require('./routes/ai');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -57,7 +58,7 @@ const analyticsRoutes = require('./routes/analyticsRoutes');
 const notificationRoutes = require('./routes/notifications');
 
 // ==================== MOUNT ROUTES ====================
-// Your routes
+// routes
 app.use('/api/account', accountRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/email', emailRoutes);
@@ -74,9 +75,9 @@ app.use('/api/wallet', walletRoutes);
 app.use('/api/sales', salesRoutes);
 app.use('/api/buying', buyingRoutes);
 app.use('/api/conversations', conversationRoutes);
-app.use('/api/conversations', conversationRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/ai', aiRoutes);
 
 // ==================== DATABASE CONNECTION ====================
 const db = mysql.createPool({

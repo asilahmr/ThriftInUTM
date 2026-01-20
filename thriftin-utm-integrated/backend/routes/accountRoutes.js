@@ -3,7 +3,18 @@ const express = require('express');
 const router = express.Router();
 const accountController = require('../controllers/accountController');
 const { authenticate, requireAdmin } = require('../middleware/authMiddleWare');
+const { upload } = require('../middleware/upload');
 
+// Student report submission (with file upload)
+router.post(
+  '/submit-report', 
+  authenticate, 
+  upload.single('evidence'),
+  accountController.submitUserReport
+);
+
+
+//Admin endpoints
 router.get(
   '/check-restrictions',
   authenticate,

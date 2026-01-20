@@ -6,10 +6,11 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
+// ✅ UPDATED: Expanded keyword matching for all categories
 async function getRelevantProducts(userMessage) {
   const keywords = userMessage
     .toLowerCase()
-    .match(/algorithm|programming|data|calculator|book|python|math/g);
+    .match(/algorithm|programming|data|calculator|book|python|math|electronic|fashion|furniture|jacket|desk|chair|shelf|bag|handbag|skirt|cloth|gadget|mouse|hub|guide/g);
 
   let sql = `
     SELECT name, price, category, \`condition\`
@@ -29,12 +30,13 @@ async function getRelevantProducts(userMessage) {
   return rows;
 }
 
+// ✅ UPDATED: OpenAI system prompt now mentions all categories
 async function generateAIReply(userId, userMessage) {
   const products = await getRelevantProducts(userMessage);
 
   const productContext = products.length
     ? products.map(p =>
-        `• ${p.name} (RM${p.price}, ${p.condition})`
+        `• ${p.name} (RM${p.price}, ${p.condition}, ${p.category})`
       ).join('\n')
     : 'No matching products found.';
 
@@ -43,8 +45,25 @@ async function generateAIReply(userId, userMessage) {
     messages: [
       {
         role: 'system',
-        content: `You are an AI shopping assistant for a university thrift marketplace.
-Give helpful, concise buying advice.`
+        content: `You are an AI shopping assistant for ThriftIn UTM, a university marketplace for students.
+
+MARKETPLACE CATEGORIES:
+- Books (textbooks, novels, reference materials)
+- Electronics (calculators, gadgets, accessories)
+- Fashion (clothing, shoes, bags)
+- Furniture (desks, chairs, shelves)
+- Others (general student items)
+
+YOUR ROLE:
+- Help students find ANY products (not just textbooks)
+- Provide pricing advice across all categories
+- Give buying/selling guidance
+- Suggest negotiation tips
+
+GUIDELINES:
+- Be helpful, friendly, and concise
+- Support ALL product categories equally
+- Focus on marketplace-related topics only`
       },
       {
         role: 'user',

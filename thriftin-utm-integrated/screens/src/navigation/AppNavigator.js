@@ -66,7 +66,7 @@ import ReportDetailScreen from '../../ReportDetailScreen';
 import ChatListScreen from '../../chat/ChatListScreen';
 import ChatDetailScreen from '../../chat/ChatDetail';
 import ChatSearchScreen from '../../chat/ChatSearchScreen';
-import ReportUserScreen from '../../chat/ReportUserScreen';
+import StudentReportUserScreen from '../../chat/StudentReportUserScreen';
 import BlockUserScreen from '../../chat/BlockUserScreen';
 
 /* =========================
@@ -157,10 +157,10 @@ const AppNavigator = () => {
           }}
         />
         <Stack.Screen name="AdminReview" component={AdminReviewScreen} options={{ title: 'Review Reports' }} />
-        <Stack.Screen name="ReviewSubmission" component={ReviewSubmissionScreen} options={{ title: 'Submission Details' }} />
+        <Stack.Screen name="ReviewSubmission" component={ReviewSubmissionScreen} options={{ headerShown: false }} />
         <Stack.Screen name="AdminHistory" component={AdminHistoryScreen} options={{ title: 'Verification History' }} />
         <Stack.Screen name="UserAccessManagement" component={UserAccessManagementScreen} options={{ title: 'User Access' }} />
-        <Stack.Screen name="ReportDetail" component={ReportDetailScreen} options={{ title: 'Report Detail' }} />
+        <Stack.Screen name="ReportDetail" component={ReportDetailScreen} options={{ headerShown: false } } />
 
         {/* =========================
             ANALYTICS / DASHBOARD FLOW
@@ -254,10 +254,10 @@ const AppNavigator = () => {
           }}
         />
         <Stack.Screen
-          name="ReportUser"
-          component={ReportUserScreen}
+          name="StudentReportUser"
+          component={StudentReportUserScreen}
           options={{
-            title: 'Report User',
+            headerShown: false,
             presentation: 'modal'
           }}
         />
