@@ -87,7 +87,6 @@ exports.sendMessage = async (req, res) => {
       const productCount = sellerInfo[0]?.product_count || 0;
 
       // Get available products BEFORE try-catch
-      // Get available products BEFORE try-catch
       const availableProducts = await query(`
         SELECT name, price, category, \`condition\`
         FROM products
