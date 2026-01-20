@@ -1,9 +1,13 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-import { API_BASE_URL } from '../utils/constants';
+import { API_BASE_URL } from '../../../utils/constants';
+
+console.log('🚀 services/api.js loaded');
+console.log('📍 Base URL:', API_BASE_URL);
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 180000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -11,25 +15,61 @@ const api = axios.create({
 
 // Request interceptor
 api.interceptors.request.use(
-  (config) => {
-    // Add auth token if exists
-    // const token = await AsyncStorage.getItem('token');
-    // if (token) {
-    //   config.headers.Authorization = `Bearer ${token}`;
-    // }
+  async (config) => {
+    try {
+      let token = await AsyncStorage.getItem('token');
+
+      if (!token) {
+        token = await AsyncStorage.getItem('userToken');
+
+        if (token) {
+          console.log('🔄 Migrating old userToken to token...');
+          await AsyncStorage.setItem('token', token);
+          await AsyncStorage.removeItem('userToken');
+
+          const userData = await AsyncStorage.getItem('userData');
+          if (userData) {
+            await AsyncStorage.setItem('user', userData);
+            await AsyncStorage.removeItem('userData');
+          }
+        }
+      }
+
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+        console.log('✅ Token added:', token.substring(0, 20) + '...');
+      } else {
+        console.log('⚠️ No token found in storage');
+      }
+
+      console.log('📤 Request:', config.method?.toUpperCase(), config.url);
+    } catch (error) {
+      console.error('❌ Error in request interceptor:', error);
+    }
     return config;
   },
   (error) => {
+    console.error('❌ Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
 
 // Response interceptor
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
+  (response) => {
+    console.log('✅ Response:', response.config.url, response.status);
+    return response;
+  },
+  async (error) => {
+    console.error('❌ Response error:', error.config?.url, error.response?.status);
+    
     if (error.response?.status === 401) {
-      // Handle unauthorized
+      // Token invalid or expired - clear all token formats
+      console.log('🔒 401 Unauthorized - clearing all tokens');
+      await AsyncStorage.removeItem('token');
+      await AsyncStorage.removeItem('userToken');
+      await AsyncStorage.removeItem('user');
+      await AsyncStorage.removeItem('userData');
     }
     return Promise.reject(error);
   }
