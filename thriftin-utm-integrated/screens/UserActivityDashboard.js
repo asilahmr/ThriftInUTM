@@ -201,7 +201,7 @@ export default function UserActivityDashboard() {
 
   // Fetch Data
   React.useEffect(() => {
-    fetch(`${API_BASE.API_URL}/api/analytics/activity`)
+    fetch(`${API_BASE.baseURL}/api/analytics/activity`)
       .then(res => res.json())
       .then(data => {
         const activities = data.activities || [];
