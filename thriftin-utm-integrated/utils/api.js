@@ -4,7 +4,7 @@ import config from '../config';
 
 // axios instance
 const api = axios.create({
-  baseURL: config?.baseURL || 'http://10.201.105.223:3000',
+  baseURL: config?.baseURL || 'http://10.134.246.207:3000',
   timeout: 180000,
 });
 
