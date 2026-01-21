@@ -60,6 +60,7 @@ router.get('/user/:userId', async (req, res) => {
             WHERE o.buyer_id = ? AND o.order_status = 'completed' ${itemFilter.clause}
             GROUP BY p.category
             ORDER BY totalSpent DESC
+            LIMIT 5
         `;
         const categoriesResult = await db.query(catQuery, [userId, ...itemFilter.params]);
 
@@ -131,6 +132,7 @@ router.get('/admin', requireAdmin, async (req, res) => {
             WHERE o.order_status = 'completed' ${itemFilter.clause}
             GROUP BY p.category
             ORDER BY totalSpent DESC
+            LIMIT 5
         `;
         const categoriesResult = await db.query(catQuery, itemFilter.params);
 
@@ -161,7 +163,7 @@ router.get('/admin', requireAdmin, async (req, res) => {
 
         // Top buyers
         const buyersQuery = `
-            SELECT s.name, SUM(oi.product_price) AS totalSpent, COUNT(*) AS itemsBought
+            SELECT o.buyer_id, COALESCE(s.name, u.email) AS name, SUM(oi.product_price) AS totalSpent, COUNT(*) AS itemsBought
             FROM orders o
             JOIN order_items oi ON o.order_id = oi.order_id
             JOIN user u ON o.buyer_id = u.id
@@ -213,6 +215,38 @@ router.get('/user/:userId/category/:category', async (req, res) => {
         console.log(`[BuyerRoutes] Category ${category} items for user ${userId}:`, results.length > 0 ? results[0] : 'No items');
         res.json(results);
     } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Admin: Get all items bought by a specific user (filtered)
+router.get('/user/:userId/items', requireAdmin, async (req, res) => {
+    const { userId } = req.params;
+
+    // Use helper to build filter
+    const filter = buildDateFilter(req.query, 'o.order_date');
+
+    const query = `
+        SELECT 
+            o.order_id, 
+            p.name, 
+            p.category, 
+            oi.product_price AS price, 
+            o.order_date as date
+        FROM order_items oi
+        JOIN products p ON oi.product_id = p.product_id
+        JOIN orders o ON oi.order_id = o.order_id
+        WHERE o.buyer_id = ? 
+        AND o.order_status = 'completed' 
+        ${filter.clause}
+        ORDER BY o.order_date DESC
+    `;
+
+    try {
+        const results = await db.query(query, [userId, ...filter.params]);
+        res.json(results);
+    } catch (err) {
+        console.error('Get bought items list error:', err);
         res.status(500).json({ error: err.message });
     }
 });

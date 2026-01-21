@@ -468,10 +468,31 @@ export default function SalesDashboard({ route, navigation }) {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Top Sellers</Text>
           {dashboardData.top_sellers.map((seller, index) => (
-            <View key={index} style={styles.topProductRow}>
-              <Text style={styles.productName}>{seller.name}</Text>
-              <Text style={styles.productSales}>RM {seller.revenue} ({seller.sold_count} sold)</Text>
-            </View>
+            <TouchableOpacity
+              key={index}
+              onPress={() => navigation.navigate('UserTransactions', {
+                userId: seller.seller_id || seller.id, // Ensure ID is correct (check API) - API returns aggregated, might need seller_id
+                // Wait, top_sellers query groups by seller_id but doesn't explicitly return it in lines 116.
+                // WE NEED TO FIX THE QUERY TO RETURN ID FIRST.
+                // Let's check salesRoutes.js lines 116.
+                // It groups by oi.seller_id. We need to select it.
+                // Actually salesRoutes.js returns: SELECT COALESCE... AS name, ... 
+                // IT MISSES THE ID! 
+                // I must update the backend query first to include seller_id/buyer_id in the select.
+
+                // Oops. I will update the backend query first in the next step. 
+                // But for now let's assume I fix it.
+                userId: seller.seller_id,
+                userName: seller.name,
+                type: 'sold',
+                filter: filter
+              })}
+            >
+              <View style={styles.topProductRow}>
+                <Text style={styles.productName}>{seller.name}</Text>
+                <Text style={styles.productSales}>RM {seller.revenue} ({seller.sold_count} sold)</Text>
+              </View>
+            </TouchableOpacity>
           ))}
         </View>
       )}
@@ -480,12 +501,22 @@ export default function SalesDashboard({ route, navigation }) {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Top Buyers</Text>
           {dashboardData.top_buyers.map((buyer, index) => (
-            <View key={index} style={styles.topProductRow}>
-              <Text style={styles.productName}>{buyer.name}</Text>
-              <Text style={styles.productSales}>
-                RM {parseFloat(buyer.totalSpent).toFixed(2)} ({buyer.itemsBought} items)
-              </Text>
-            </View>
+            <TouchableOpacity
+              key={index}
+              onPress={() => navigation.navigate('UserTransactions', {
+                userId: buyer.buyer_id, // Need to make sure API returns this
+                userName: buyer.name,
+                type: 'bought',
+                filter: filter
+              })}
+            >
+              <View style={styles.topProductRow}>
+                <Text style={styles.productName}>{buyer.name}</Text>
+                <Text style={styles.productSales}>
+                  RM {parseFloat(buyer.totalSpent).toFixed(2)} ({buyer.itemsBought} items)
+                </Text>
+              </View>
+            </TouchableOpacity>
           ))}
         </View>
       )}

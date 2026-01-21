@@ -23,6 +23,7 @@ import CategoryProducts from '../../CategoryProducts';
 import SoldItemScreen from '../../SoldItemScreen';
 import BuyerCategoryDetail from '../../BuyerCategoryDetail';
 import UserActivityDashboard from '../../UserActivityDashboard';
+import UserTransactions from '../../UserTransactions';
 import AdminPanel from '../../AdminPanel';
 import Chat from '../../Chat';
 
@@ -206,6 +207,8 @@ const AppNavigator = () => {
           component={SoldItemScreen}
           options={{ title: 'Sale Details' }}
         />
+
+        <Stack.Screen name="UserTransactions" component={UserTransactions} />
 
         <Stack.Screen
           name="BuyerCategoryDetail"

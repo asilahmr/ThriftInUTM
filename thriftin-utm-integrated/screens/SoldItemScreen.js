@@ -12,10 +12,24 @@ const SoldItemScreen = ({ route, navigation }) => {
     const { orderId } = route.params;
     const [sale, setSale] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [isAdmin, setIsAdmin] = useState(false);
 
     useEffect(() => {
+        checkUserRole();
         fetchSaleDetails();
     }, [orderId]);
+
+    const checkUserRole = async () => {
+        try {
+            const userData = await AsyncStorage.getItem('userData');
+            if (userData) {
+                const user = JSON.parse(userData);
+                setIsAdmin(user.userType === 'admin');
+            }
+        } catch (e) {
+            console.error('Error checking user role:', e);
+        }
+    };
 
     const fetchSaleDetails = async () => {
         try {
@@ -79,6 +93,41 @@ const SoldItemScreen = ({ route, navigation }) => {
             `Hi ${sale.buyer_name},\n\nI'm contacting you about your order #${sale.order_id}.\n\n`
         );
         Linking.openURL(`mailto:${sale.buyer_email}?subject=${subject}&body=${body}`);
+    };
+
+    const handleChatWithSeller = async () => {
+        if (!sale) return;
+        try {
+            const userData = await AsyncStorage.getItem('userData');
+            if (!userData) {
+                Alert.alert('Error', 'Please login to chat');
+                return;
+            }
+            const user = JSON.parse(userData);
+            const currentUserId = user.id || user.user_id;
+
+            const conversation = await chatApi.createConversation(
+                currentUserId,
+                sale.seller_id
+            );
+
+            navigation.navigate('ChatDetail', {
+                conversationId: conversation.conversation_id,
+                otherUserId: sale.seller_id,
+                otherUsername: sale.seller_name,
+                userId: currentUserId
+            });
+        } catch (error) {
+            console.error('Chat error:', error);
+            Alert.alert('Error', 'Could not start chat with seller');
+        }
+    };
+
+    const handleEmailSeller = () => {
+        if (!sale) return;
+        const subject = encodeURIComponent(`Regarding sold item: ${sale.product_name} (Order #${sale.order_id})`);
+        const body = encodeURIComponent(`Hi ${sale.seller_name},\n\nI'm contacting you regarding your sold item...`);
+        Linking.openURL(`mailto:${sale.seller_email}?subject=${subject}&body=${body}`);
     };
 
     if (loading) {
@@ -145,6 +194,30 @@ const SoldItemScreen = ({ route, navigation }) => {
                     </View>
                 </View>
 
+                {/* Seller Info - Only for Admin */}
+                {isAdmin && (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Seller Information</Text>
+                        <View style={styles.buyerCard}>
+                            <View style={[styles.buyerAvatar, { backgroundColor: '#FF9800' }]}>
+                                <Text style={styles.avatarText}>
+                                    {sale.seller_name ? sale.seller_name.charAt(0).toUpperCase() : '?'}
+                                </Text>
+                            </View>
+                            <View style={styles.buyerInfo}>
+                                <Text style={styles.buyerName}>{sale.seller_name}</Text>
+                                <Text style={styles.buyerEmail}>{sale.seller_email}</Text>
+                            </View>
+                            <TouchableOpacity style={[styles.contactButton, { marginRight: 8 }]} onPress={handleChatWithSeller}>
+                                <Text style={styles.contactIcon}>💬</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.contactButton} onPress={handleEmailSeller}>
+                                <Text style={styles.contactIcon}>✉️</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                )}
+
                 {/* Buyer Info */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Buyer Information</Text>
@@ -164,6 +237,7 @@ const SoldItemScreen = ({ route, navigation }) => {
                         </TouchableOpacity>
                     </View>
                 </View>
+                <View style={{ height: 40 }} />
             </ScrollView>
         </View>
     );
