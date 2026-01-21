@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import {
   View,
@@ -10,13 +11,18 @@ import {
   Alert,
   Platform
 } from 'react-native';
+import axios from 'axios';
+import API_BASE from '../../config';
 import RatingStars from './RatingStars';
 
-const FeedbackForm = ({ onSubmit, initialData = {}, loading = false }) => {
+const API_URL = `${API_BASE}/api`;
+
+const FeedbackForm = ({ userId, onSubmit, initialData = {}, loading = false }) => {
   const [feedbackType, setFeedbackType] = useState(initialData.feedbackType || '');
   const [title, setTitle] = useState(initialData.title || '');
   const [description, setDescription] = useState(initialData.description || '');
   const [rating, setRating] = useState(initialData.rating || 0);
+  const [submitting, setSubmitting] = useState(false);
 
   const feedbackTypes = [
     { value: 'bug_report', label: 'Bug Report', icon: '🐛', color: '#F44336' },
@@ -46,18 +52,58 @@ const FeedbackForm = ({ onSubmit, initialData = {}, loading = false }) => {
     return true;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validate()) return;
     
-    onSubmit({
-      feedback_type: feedbackType,
-      title: title.trim(),
-      description: description.trim(),
-      rating: rating || null,
-      category: 'general',
-      platform: Platform.OS,
-      app_version: '1.0.0'
-    });
+    setSubmitting(true);
+    
+    try {
+      const feedbackData = {
+        user_id: userId,
+        feedback_type: feedbackType,
+        title: title.trim(),
+        description: description.trim(),
+        rating: rating || null,
+        category: 'general',
+        platform: Platform.OS,
+        app_version: '1.0.0'
+      };
+
+      const response = await axios.post(`${API_URL}/feedback`, feedbackData);
+      
+      setSubmitting(false);
+      
+      if (response.data.success) {
+        Alert.alert(
+          'Success',
+          'Your feedback has been submitted successfully!',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Reset form
+                setFeedbackType('');
+                setTitle('');
+                setDescription('');
+                setRating(0);
+                
+                // Call parent callback if provided
+                if (onSubmit) {
+                  onSubmit(response.data);
+                }
+              }
+            }
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+      setSubmitting(false);
+      Alert.alert(
+        'Error',
+        error.response?.data?.error || 'Failed to submit feedback. Please try again.'
+      );
+    }
   };
 
   return (
@@ -144,12 +190,12 @@ const FeedbackForm = ({ onSubmit, initialData = {}, loading = false }) => {
       )}
 
       <TouchableOpacity
-        style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+        style={[styles.submitButton, (loading || submitting) && styles.submitButtonDisabled]}
         onPress={handleSubmit}
-        disabled={loading}
+        disabled={loading || submitting}
         activeOpacity={0.8}
       >
-        {loading ? (
+        {(loading || submitting) ? (
           <ActivityIndicator color="#FFFFFF" />
         ) : (
           <Text style={styles.submitButtonText}>Submit Feedback</Text>
@@ -158,112 +204,3 @@ const FeedbackForm = ({ onSubmit, initialData = {}, loading = false }) => {
     </ScrollView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  section: {
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 12,
-  },
-  typesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 20,
-  },
-  typeCard: {
-    width: '48%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
-  },
-  typeIcon: {
-    fontSize: 32,
-    marginBottom: 8,
-  },
-  typeLabel: {
-    fontSize: 13,
-    color: '#333333',
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  ratingLabel: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000000',
-    textAlign: 'center',
-    marginTop: 12,
-  },
-  input: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    color: '#000000',
-  },
-  textArea: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    minHeight: 120,
-    color: '#000000',
-  },
-  charCount: {
-    fontSize: 12,
-    color: '#999999',
-    textAlign: 'right',
-    marginTop: 4,
-  },
-  infoBox: {
-    backgroundColor: '#E3F2FD',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: '#2196F3',
-  },
-  infoTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1976D2',
-    marginBottom: 8,
-  },
-  infoText: {
-    fontSize: 13,
-    color: '#1565C0',
-    lineHeight: 20,
-  },
-  submitButton: {
-    backgroundColor: '#B71C1C',
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-    marginTop: 10,
-    marginBottom: 20,
-  },
-  submitButtonDisabled: {
-    backgroundColor: '#CCCCCC',
-  },
-  submitButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-});
-
-export default FeedbackForm;

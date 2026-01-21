@@ -244,22 +244,33 @@ const handleReport = () => {
   };
 
   const renderMessage = ({ item }) => {
-    const isMyMessage = item.sender_id === userId;
+  const isMyMessage = item.sender_id === userId;
 
-    return (
+  return (
+    <View
+      style={[
+        styles.messageContainer,
+        isMyMessage ? styles.myMessageContainer : styles.otherMessageContainer
+      ]}
+    >
       <View
         style={[
-          styles.messageContainer,
-          isMyMessage ? styles.myMessageContainer : styles.otherMessageContainer
+          styles.messageBubble,
+          isMyMessage ? styles.myMessageBubble : styles.otherMessageBubble,
+          item.pending && { opacity: 0.7 }
         ]}
       >
-        <View
-          style={[
-            styles.messageBubble,
-            isMyMessage ? styles.myMessageBubble : styles.otherMessageBubble,
-            item.pending && { opacity: 0.7 }
-          ]}
-        >
+        {item.message_type === 'image' ? (
+          <Image
+            source={{ uri: item.message_text }} // 你后端返回的应该是图片 URL
+            style={{ width: 200, height: 200, borderRadius: 12 }}
+            resizeMode="cover"
+          />
+        ) : item.message_type === 'file' ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text>📄 {item.message_text}</Text>
+          </View>
+        ) : (
           <Text
             style={[
               styles.messageText,
@@ -268,21 +279,24 @@ const handleReport = () => {
           >
             {item.message_text}
           </Text>
-          <Text
-            style={[
-              styles.messageTime,
-              isMyMessage ? styles.myMessageTime : styles.otherMessageTime
-            ]}
-          >
-            {new Date(item.created_at).toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit'
-            })}
-          </Text>
-        </View>
+        )}
+
+        <Text
+          style={[
+            styles.messageTime,
+            isMyMessage ? styles.myMessageTime : styles.otherMessageTime
+          ]}
+        >
+          {new Date(item.created_at).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit'
+          })}
+        </Text>
       </View>
-    );
-  };
+    </View>
+  );
+};
+
 
   return (
     <KeyboardAvoidingView

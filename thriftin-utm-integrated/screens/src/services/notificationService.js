@@ -1,27 +1,64 @@
+
 import api from './api';
 
 export const notificationService = {
-  getNotifications: (userId, params = {}) => {
-    return api.get(`/notifications/${userId}`, { params });
+  getNotifications: async (userId, params = {}) => {
+    try {
+      const response = await api.get(`/api/notifications/${userId}`, { params });
+      return response;
+    } catch (error) {
+      console.error('Get notifications error:', error);
+      throw error;
+    }
   },
 
-  getUnreadCount: (userId) => {
-    return api.get(`/notifications/${userId}/unread-count`);
+  getUnreadCount: async (userId) => {
+    try {
+      const response = await api.get(`/api/notifications/${userId}/unread-count`);
+      return response;
+    } catch (error) {
+      console.error('Get unread count error:', error);
+      throw error;
+    }
   },
 
-  markAsRead: (notificationId) => {
-    return api.put(`/notifications/${notificationId}/read`);
+  markAsRead: async (notificationId) => {
+    try {
+      const response = await api.put(`/api/notifications/${notificationId}/read`);
+      return response;
+    } catch (error) {
+      console.error('Mark as read error:', error);
+      throw error;
+    }
   },
 
-  markAllAsRead: (userId) => {
-    return api.put(`/notifications/read-all/${userId}`);
+  markAllAsRead: async (userId) => {
+    try {
+      const response = await api.put(`/api/notifications/read-all/${userId}`);
+      return response;
+    } catch (error) {
+      console.error('Mark all as read error:', error);
+      throw error;
+    }
   },
 
-  getPreferences: (userId) => {
-    return api.get(`/notifications/preferences/${userId}`);
+  getPreferences: async (userId) => {
+    try {
+      const response = await api.get(`/api/notifications/preferences/${userId}`);
+      return response;
+    } catch (error) {
+      console.error('Get preferences error:', error);
+      throw error;
+    }
   },
 
-  updatePreferences: (userId, preferences) => {
-    return api.put(`/notifications/preferences/${userId}`, preferences);
+  updatePreferences: async (userId, preferences) => {
+    try {
+      const response = await api.put(`/api/notifications/preferences/${userId}`, preferences);
+      return response;
+    } catch (error) {
+      console.error('Update preferences error:', error);
+      throw error;
+    }
   },
 };

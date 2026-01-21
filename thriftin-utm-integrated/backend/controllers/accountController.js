@@ -67,7 +67,7 @@ const checkUserRestrictions = async (req, res) => {
       } else if (isUnverified) {
         restrictions.push({
           type: 'restricted_unverified',
-          message: 'Please verify your account to perform transactions.',
+          message: 'Please verify your matric number to perform transactions.',
           canBuy: false,
           canSell: false,
           action: 'verify_account'
@@ -440,7 +440,6 @@ const getUserReports = async (req, res) => {
     console.log('\n=== GET USER REPORTS ===');
     console.log('User ID:', userId);
 
-    // First check if user exists
     const userCheck = await db.query(
       'SELECT id FROM user WHERE id = ?',
       [userId]
@@ -481,21 +480,16 @@ const getUserReports = async (req, res) => {
         reporterEmail: report.reporterEmail,
         reporterName: report.reporterName || 'Unknown',
         reporterMatric: report.reporterMatric || report.reporter_matric || 'N/A',
-        evidence: []
+        evidence_path: report.evidence_path,     
+        evidence_type: report.evidence_type      
       };
-
-      // Add evidence if exists
-      if (report.evidence_path) {
-        formatted.evidence.push({
-          filePath: report.evidence_path,
-          fileType: report.evidence_type
-        });
-      }
 
       console.log(`Report ${report.id}:`, {
         reason: report.reason,
         reporter: report.reporterEmail,
-        hasEvidence: !!report.evidence_path
+        hasEvidence: !!report.evidence_path,
+        evidencePath: report.evidence_path,
+        evidenceType: report.evidence_type
       });
 
       return formatted;

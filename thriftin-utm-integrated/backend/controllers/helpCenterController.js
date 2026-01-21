@@ -1,4 +1,13 @@
-const { query } = require('../config/db');
+const db = require('../config/db');
+
+const query = (sql, params) => {
+  return new Promise((resolve, reject) => {
+    db.query(sql, params, (err, result) => {
+      if (err) reject(err);
+      else resolve(result);
+    });
+  });
+};
 
 exports.getCategories = async (req, res) => {
   try {
@@ -115,6 +124,14 @@ exports.createTicket = async (req, res) => {
   try {
     const { user_id, subject, description, category, priority = 'normal' } = req.body;
     
+    // Validate required fields
+    if (!user_id || !subject || !description || !category) {
+      return res.status(400).json({ 
+        error: 'Missing required fields',
+        details: 'user_id, subject, description, and category are required'
+      });
+    }
+    
     const ticket_number = 'TKT-' + new Date().getFullYear() + '-' + 
                          String(Math.floor(Math.random() * 10000)).padStart(4, '0');
     
@@ -124,15 +141,20 @@ exports.createTicket = async (req, res) => {
     }
     
     const result = await query(`
-      INSERT INTO help_tickets (user_id, ticket_number, subject, description, category, priority, attachment_url)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO help_tickets (user_id, ticket_number, subject, description, category, priority, attachment_url, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'open')
     `, [user_id, ticket_number, subject, description, category, priority, attachment_url]);
     
     // Create notification
-    await query(`
-      INSERT INTO notifications (user_id, notification_type, title, message_preview, priority)
-      VALUES (?, 'help_ticket', 'Support Ticket Created', ?, 'normal')
-    `, [user_id, `Your ticket ${ticket_number} has been created. We'll respond within 24 hours.`]);
+    try {
+      await query(`
+        INSERT INTO notifications (user_id, notification_type, title, message_preview, priority)
+        VALUES (?, 'help_ticket', 'Support Ticket Created', ?, 'normal')
+      `, [user_id, `Your ticket ${ticket_number} has been created. We'll respond within 24 hours.`]);
+    } catch (notifError) {
+      console.error('Error creating notification:', notifError);
+      // Don't fail the request if notification fails
+    }
     
     res.json({ 
       success: true, 
@@ -142,7 +164,10 @@ exports.createTicket = async (req, res) => {
     });
   } catch (error) {
     console.error('Error creating ticket:', error);
-    res.status(500).json({ error: 'Failed to create ticket' });
+    res.status(500).json({ 
+      error: 'Failed to create ticket',
+      details: error.message 
+    });
   }
 };
 

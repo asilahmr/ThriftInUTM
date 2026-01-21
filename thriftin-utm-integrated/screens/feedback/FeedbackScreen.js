@@ -1,7 +1,4 @@
-// ============================================
-// Feedback Screen (Submit Feedback)
 // frontend/src/screens/feedback/FeedbackScreen.js
-// ============================================
 import React, { useState } from 'react';
 import {
   View,
@@ -14,9 +11,8 @@ import {
   Alert,
   Platform
 } from 'react-native';
+import api from '../../utils/api';
 import axios from 'axios';
-import API_BASE from '../../config';
-const API_URL = `${API_BASE}/api`;
 
 const FeedbackScreen = ({ navigation, route }) => {
   const userId = route.params?.userId || 2;
@@ -60,11 +56,11 @@ const FeedbackScreen = ({ navigation, route }) => {
     
     setLoading(true);
     try {
-      await axios.post(`${API_URL}/feedback`, {
+      const feedbackData = {
         user_id: userId,
         feedback_type: feedbackType,
-        title,
-        description,
+        title: title.trim(),
+        description: description.trim(),
         rating: rating || null,
         category: 'general',
         platform: Platform.OS,
@@ -73,27 +69,46 @@ const FeedbackScreen = ({ navigation, route }) => {
           os: Platform.OS,
           version: Platform.Version
         })
-      });
+      };
+
+      console.log('📝 Submitting feedback:', feedbackData);
+
+      const response = await api.post('/feedback', feedbackData);
       
       setLoading(false);
-      Alert.alert(
-        'Thank You!',
-        'Your feedback has been submitted successfully. We appreciate your input!',
-        [
-          {
-            text: 'View My Feedback',
-            onPress: () => navigation.replace('FeedbackHistory', { userId })
-          },
-          {
-            text: 'Close',
-            onPress: () => navigation.goBack()
-          }
-        ]
-      );
+      
+      if (response.data.success) {
+        Alert.alert(
+          'Thank You!',
+          'Your feedback has been submitted successfully. We appreciate your input!',
+          [
+            {
+              text: 'View My Feedback',
+              onPress: () => navigation.replace('FeedbackHistory', { userId })
+            },
+            {
+              text: 'Close',
+              onPress: () => navigation.goBack()
+            }
+          ]
+        );
+        
+        // Reset form
+        setFeedbackType('');
+        setTitle('');
+        setDescription('');
+        setRating(0);
+      }
     } catch (error) {
       console.error('Error submitting feedback:', error);
       setLoading(false);
-      Alert.alert('Error', 'Failed to submit feedback. Please try again.');
+      
+      const errorMessage = error.response?.data?.error || 
+                          error.message === 'Network Error' 
+                            ? 'Cannot connect to server. Please check your internet connection.' 
+                            : 'Failed to submit feedback. Please try again.';
+      
+      Alert.alert('Error', errorMessage);
     }
   };
 
@@ -129,7 +144,10 @@ const FeedbackScreen = ({ navigation, route }) => {
               key={type.value}
               style={[
                 styles.typeCard,
-                feedbackType === type.value && { borderColor: type.color, backgroundColor: type.color + '15' }
+                feedbackType === type.value && { 
+                  borderColor: type.color, 
+                  backgroundColor: type.color + '15' 
+                }
               ]}
               onPress={() => setFeedbackType(type.value)}
             >
@@ -203,9 +221,6 @@ const FeedbackScreen = ({ navigation, route }) => {
   );
 };
 
-// ============================================
-// Shared Styles
-// ============================================
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -213,49 +228,6 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
-  },
-  header: {
-    backgroundColor: '#B71C1C',
-    padding: 16,
-    paddingTop: 50,
-    paddingBottom: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backButton: {
-    padding: 4,
-  },
-  backIcon: {
-    fontSize: 28,
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    flex: 1,
-    marginLeft: 12,
-  },
-  addButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addIcon: {
-    fontSize: 24,
-    color: '#B71C1C',
-    fontWeight: 'bold',
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: 100,
   },
   title: {
     fontSize: 24,
@@ -308,12 +280,6 @@ const styles = StyleSheet.create({
   },
   star: {
     fontSize: 32,
-  },
-  starButton: {
-    padding: 4,
-  },
-  starLarge: {
-    fontSize: 48,
   },
   input: {
     backgroundColor: '#FFFFFF',
@@ -386,157 +352,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
-  filterContainer: {
-    maxHeight: 60,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  filterContent: {
-    padding: 12,
-    gap: 8,
-  },
-  filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 16,
-    backgroundColor: '#F5F5F5',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  filterChipActive: {
-    backgroundColor: '#B71C1C',
-    borderColor: '#B71C1C',
-  },
-  filterText: {
-    fontSize: 14,
-    color: '#666666',
-    fontWeight: '500',
-  },
-  filterTextActive: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-  },
-  listContainer: {
-    padding: 16,
-  },
-  feedbackCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  feedbackHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  feedbackTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginRight: 8,
-  },
-  feedbackIcon: {
-    fontSize: 20,
-    marginRight: 8,
-  },
-  feedbackTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-    flex: 1,
-  },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusText: {
-    fontSize: 11,
-    color: '#FFFFFF',
-    fontWeight: '600',
-    textTransform: 'capitalize',
-  },
-  feedbackDescription: {
-    fontSize: 14,
-    color: '#666666',
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  feedbackMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  metaText: {
-    fontSize: 12,
-    color: '#999999',
-  },
-  emptyContainer: {
-    padding: 32,
-    alignItems: 'center',
-    paddingTop: 100,
-  },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#666666',
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#999999',
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  emptyButton: {
-    backgroundColor: '#B71C1C',
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 24,
-  },
-  emptyButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  heroSection: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  heroIcon: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  heroTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#000000',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  heroSubtitle: {
-    fontSize: 14,
-    color: '#666666',
-    textAlign: 'center',
-  },
-  ratingText: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000000',
-    textAlign: 'center',
-    marginBottom: 24,
-  },
 });
 
-export default FeedbackScreen ;
+export default FeedbackScreen;

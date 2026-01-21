@@ -11,6 +11,8 @@ import {
   RefreshControl, // Added RefreshControl
   Alert
 } from 'react-native';
+
+import axios from 'axios';
 import API_BASE from '../../config';
 const API_URL = `${API_BASE}/api`;
 

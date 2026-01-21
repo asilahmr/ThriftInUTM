@@ -17,6 +17,7 @@ import api from '../utils/api';
 const ReviewSubmissionScreen = ({ navigation, route }) => {
   const { review } = route.params;
   const [submitting, setSubmitting] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const handleApprove = () => {
     Alert.alert(
@@ -97,8 +98,25 @@ const ReviewSubmissionScreen = ({ navigation, route }) => {
     (review.extractedMatric && review.matric && 
      review.extractedMatric.toUpperCase() === review.matric.toUpperCase());
 
-  // Safely handle reason string
   const hasReason = review.reason && typeof review.reason === 'string' && review.reason.trim().length > 0;
+
+  // Build correct image URL
+  const getImageUrl = () => {
+    if (!review.filePath) return null;
+    
+    // Clean the file path
+    let cleanPath = review.filePath.replace(/\\/g, '/');
+    if (cleanPath.startsWith('/')) {
+      cleanPath = cleanPath.substring(1);
+    }
+    
+    const imageUrl = `http://172.20.10.4:3000/${cleanPath}`;
+    console.log('Image URL:', imageUrl);
+    console.log('Original file path:', review.filePath);
+    return imageUrl;
+  };
+
+  const imageUrl = getImageUrl();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -191,18 +209,33 @@ const ReviewSubmissionScreen = ({ navigation, route }) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Uploaded Matric Card</Text>
           <View style={styles.card}>
-            {review.filePath ? (
-              <Image
-                source={{ 
-                  uri: `http://10.61.234.113:3000/${review.filePath.replace(/\\/g, '/').replace(/^\/+/, '')}` 
-                }}
-                style={styles.matricCardImage}
-                resizeMode="contain"
-              />
+            {imageUrl && !imageError ? (
+              <>
+                <Image
+                  source={{ uri: imageUrl }}
+                  style={styles.matricCardImage}
+                  resizeMode="contain"
+                  onError={(error) => {
+                    console.error('Image load error:', error.nativeEvent.error);
+                    setImageError(true);
+                  }}
+                  onLoad={() => {
+                    console.log('Image loaded successfully');
+                  }}
+                />
+                <Text style={styles.imagePathText}>Path: {review.filePath}</Text>
+              </>
             ) : (
               <View style={styles.matricCardPlaceholder}>
                 <MaterialIcons name="credit-card" size={48} color="#ccc" />
-                <Text style={styles.placeholderText}>No matric card uploaded</Text>
+                <Text style={styles.placeholderText}>
+                  {imageError ? 'Failed to load image' : 'No matric card uploaded'}
+                </Text>
+                {imageError && imageUrl && (
+                  <Text style={styles.errorPathText}>
+                    Attempted URL: {imageUrl}
+                  </Text>
+                )}
               </View>
             )}
           </View>
@@ -220,7 +253,6 @@ const ReviewSubmissionScreen = ({ navigation, route }) => {
           </View>
         ) : null}
 
-        {/* Only show action buttons if status is pending or flagged */}
         {(review.status === 'Pending' || review.status === 'Flagged') ? (
           <View style={styles.actionButtons}>
             <TouchableOpacity 
@@ -254,7 +286,6 @@ const ReviewSubmissionScreen = ({ navigation, route }) => {
           </View>
         ) : null}
 
-        {/* Show final decision banner for verified/rejected submissions */}
         {(review.status === 'verified' || review.status === 'rejected') ? (
           <View style={[
             styles.finalDecisionBanner,
@@ -448,6 +479,12 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: 10,
   },
+  imagePathText: {
+    fontSize: 10,
+    color: '#999',
+    padding: 8,
+    textAlign: 'center',
+  },
   matricCardPlaceholder: {
     width: '100%',
     height: 200,
@@ -463,6 +500,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     marginTop: 10,
+  },
+  errorPathText: {
+    fontSize: 10,
+    color: '#f44336',
+    marginTop: 5,
+    paddingHorizontal: 20,
+    textAlign: 'center',
   },
   reasonContainer: {
     flexDirection: 'row',

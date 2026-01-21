@@ -308,6 +308,9 @@ exports.extractMatricNumber = async (req, res) => {
         }
       }
     } else {
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
       return res.status(400).json({
         success: false,
         message: 'PDF extraction not supported. Please upload JPG/PNG image.'
@@ -370,11 +373,35 @@ exports.submitVerification = async (req, res) => {
     console.log('User ID:', userId);
     console.log('File size:', fileSizeInKB.toFixed(2), 'KB');
 
-    const [existingSubmissions] = await db.query(
-      `SELECT * FROM verification_submissions 
-       WHERE user_id = ? AND status IN ('pending', 'flagged')`,
-      [userId]
-    );
+    console.log('Step 1: Checking existing submissions...');
+    let existingResult;
+    try {
+      existingResult = await db.query(
+        `SELECT * FROM verification_submissions 
+         WHERE user_id = ? AND status IN ('pending', 'flagged')`,
+        [userId]
+      );
+      console.log('Raw existing result type:', typeof existingResult);
+      console.log('Is array?', Array.isArray(existingResult));
+      console.log('Length:', existingResult?.length);
+      console.log('First element type:', typeof existingResult?.[0]);
+    } catch (dbError) {
+      console.error('Database query error:', dbError);
+      throw dbError;
+    }
+    
+    let existingSubmissions;
+    if (Array.isArray(existingResult)) {
+      if (Array.isArray(existingResult[0])) {
+        existingSubmissions = existingResult[0];
+      } else {
+        existingSubmissions = existingResult;
+      }
+    } else {
+      existingSubmissions = [];
+    }
+    
+    console.log('Processed existingSubmissions:', existingSubmissions.length, 'items');
 
     if (existingSubmissions.length > 0) {
       if (fs.existsSync(filePath)) {
@@ -387,11 +414,32 @@ exports.submitVerification = async (req, res) => {
       });
     }
 
-    // get registered matric
-    const [students] = await db.query(
-      'SELECT matric FROM students WHERE user_id = ?',
-      [userId]
-    );
+    console.log('Step 2: Getting student record...');
+    let studentResult;
+    try {
+      studentResult = await db.query(
+        'SELECT matric FROM students WHERE user_id = ?',
+        [userId]
+      );
+      console.log('Raw student result type:', typeof studentResult);
+      console.log('Is array?', Array.isArray(studentResult));
+    } catch (dbError) {
+      console.error('Database query error:', dbError);
+      throw dbError;
+    }
+    
+    let students;
+    if (Array.isArray(studentResult)) {
+      if (Array.isArray(studentResult[0])) {
+        students = studentResult[0];
+      } else {
+        students = studentResult;
+      }
+    } else {
+      students = [];
+    }
+
+    console.log('Processed students:', students.length, 'items');
 
     if (students.length === 0) {
       if (fs.existsSync(filePath)) {
@@ -407,22 +455,28 @@ exports.submitVerification = async (req, res) => {
     console.log('Registered Matric:', registeredMatric);
 
     let extractedMatric = null;
+    let allTexts = [];
     
     if (req.file.mimetype.startsWith('image/')) {
-      const allTexts = await performOCR(filePath);
+      console.log('🔍 Starting OCR process...');
+      allTexts = await performOCR(filePath);
+      console.log('✅ OCR completed, found', allTexts.length, 'results');
       
-      for (const { strategy, text } of allTexts) {
-        const matric = extractMatricFromText(text);
-        if (matric) {
-          extractedMatric = matric;
-          console.log(`✓ Extracted: ${matric} (${strategy})`);
-          break;
+      if (Array.isArray(allTexts) && allTexts.length > 0) {
+        for (const { strategy, text } of allTexts) {
+          const matric = extractMatricFromText(text);
+          if (matric) {
+            extractedMatric = matric;
+            console.log(`✓ Extracted: ${matric} (${strategy})`);
+            break;
+          }
         }
-      }
-      
-      if (!extractedMatric && allTexts.length > 0) {
-        const combinedText = allTexts.map(t => t.text).join(' ');
-        extractedMatric = extractMatricFromText(combinedText);
+        
+        if (!extractedMatric) {
+          console.log('Trying combined text...');
+          const combinedText = allTexts.map(t => t.text).join(' ');
+          extractedMatric = extractMatricFromText(combinedText);
+        }
       }
     } else {
       if (fs.existsSync(filePath)) {
@@ -475,7 +529,7 @@ exports.submitVerification = async (req, res) => {
       }
     }
 
-    // Insert into database with auto_match_success field
+    console.log('💾 Saving to database...');
     await db.query(
       `INSERT INTO verification_submissions 
        (user_id, file_path, extracted_matric, status, reason, auto_match_success, created_at) 
@@ -495,6 +549,7 @@ exports.submitVerification = async (req, res) => {
     console.log('Status:', status);
     console.log('Auto-match:', autoMatchSuccess ? 'YES' : 'NO');
     console.log('Reason:', flagReason || 'None');
+    console.log('File saved:', filePath);
     console.log('========================================\n');
 
     res.json({
@@ -514,7 +569,9 @@ exports.submitVerification = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Submit verification error:', error);
+    console.error('❌ Submit verification error:', error);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
     
     if (req.file && fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
@@ -522,7 +579,8 @@ exports.submitVerification = async (req, res) => {
     
     res.status(500).json({
       success: false,
-      message: 'Failed to submit verification'
+      message: 'Failed to submit verification',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };

@@ -12,6 +12,7 @@ const ensureDir = (dir) => {
 ensureDir('uploads/products');
 ensureDir('uploads/attachments');
 ensureDir('uploads/feedback');
+ensureDir('uploads/evidence');  
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -23,6 +24,17 @@ const storage = multer.diskStorage({
     const ext = path.extname(file.originalname);
     const prefix = req.body.upload_type === 'products' ? 'product-' : '';
     cb(null, `${prefix}${uniqueSuffix}${ext}`);
+  }
+});
+
+const evidenceStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/evidence/');
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, `evidence-${uniqueSuffix}${ext}`);
   }
 });
 
@@ -49,6 +61,19 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
+
+const evidenceFileFilter = (req, file, cb) => {
+  const allowedTypes = /jpeg|jpg|png|gif|pdf|doc|docx|txt/;
+  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+  const mimetype = allowedTypes.test(file.mimetype);
+  
+  if (extname && mimetype) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only images and documents (PDF, DOC, DOCX, TXT) are allowed for evidence'), false);
+  }
+};
+
 const upload = multer({
   storage,
   limits: {
@@ -56,6 +81,15 @@ const upload = multer({
     files: 5
   },
   fileFilter
+});
+
+const uploadEvidence = multer({
+  storage: evidenceStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, 
+    files: 1  
+  },
+  fileFilter: evidenceFileFilter
 });
 
 const uploadProductImages = upload.array('images', 5);
@@ -97,5 +131,6 @@ module.exports = {
   uploadProductImages,
   uploadSingle,
   uploadMultiple,
+  uploadEvidence,  
   handleUploadError
 };

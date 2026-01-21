@@ -11,6 +11,7 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const aiRoutes = require('./routes/ai');
+const fs = require('fs')
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -50,12 +51,15 @@ const orderRoutes = require('./routes/orderRoutes');
 const walletRoutes = require('./routes/walletRoutes');
 const salesRoutes = require('./routes/salesRoutes');
 const buyingRoutes = require('./routes/buyerRoutes');
+const reportRoutes = require('./routes/reports');
 
 const conversationRoutes = require('./routes/conversations');
 const messageRoutes = require('./routes/messages');
 
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const notificationRoutes = require('./routes/notifications');
+const feedbackRoutes = require('./routes/feedback');
+const helpRoutes = require('./routes/helpCenter'); 
 
 // ==================== MOUNT ROUTES ====================
 // routes
@@ -78,6 +82,9 @@ app.use('/api/conversations', conversationRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/feedback', feedbackRoutes);
+app.use('/api/help', helpRoutes);
 
 // ==================== DATABASE CONNECTION ====================
 const db = mysql.createPool({

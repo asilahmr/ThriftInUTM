@@ -10,10 +10,8 @@ import {
   Alert,
   Modal
 } from 'react-native';
-import axios from 'axios';
 import SuccessModal from '../../components/common/SuccessModal';
-import API_BASE from '../../config';
-const API_URL = `${API_BASE}/api`;
+import api from '../../utils/api'; // ✅ Use the api instance with auth
 
 const BlockUserScreen = ({ navigation, route }) => {
   const { blockedId, blockerId, blockedUsername } = route.params;
@@ -87,21 +85,31 @@ const BlockUserScreen = ({ navigation, route }) => {
     setLoading(true);
 
     try {
-      await axios.post(`${API_URL}/reports/block`, {
+      console.log('🚫 Blocking user:', {
+        blocker_id: blockerId,
+        blocked_id: blockedId,
+        reason: selectedReason
+      });
+
+      // ✅ Use api instance instead of axios directly
+      const response = await api.post('/api/reports/block', {
         blocker_id: blockerId,
         blocked_id: blockedId,
         reason: selectedReason,
         additional_details: additionalDetails.trim()
       });
 
+      console.log('✅ Block response:', response.data);
       setLoading(false);
       setShowSuccessModal(true);
     } catch (error) {
       setLoading(false);
-      console.error('Error blocking user:', error);
+      console.error('❌ Error blocking user:', error);
+      console.error('Error response:', error.response?.data);
+      
       Alert.alert(
         'Error',
-        'Failed to block user. Please try again.',
+        error.response?.data?.error || 'Failed to block user. Please try again.',
         [{ text: 'OK' }]
       );
     }

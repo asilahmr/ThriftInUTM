@@ -1,4 +1,13 @@
-const { query } = require('../config/db');
+const db = require('../config/db');
+
+const query = (sql, params) => {
+  return new Promise((resolve, reject) => {
+    db.query(sql, params, (err, result) => {
+      if (err) reject(err);
+      else resolve(result);
+    });
+  });
+};
 
 exports.getNotifications = async (req, res) => {
   try {
@@ -101,33 +110,69 @@ exports.updatePreferences = async (req, res) => {
   try {
     const { userId } = req.params;
     const prefs = req.body;
-    
-    await query(`
-      UPDATE user_notification_preferences
-      SET new_messages_enabled = ?,
-          system_updates_enabled = ?,
-          push_enabled = ?,
-          email_enabled = ?,
-          report_updates_enabled = ?,
-          feedback_responses_enabled = ?,
-          price_alerts_enabled = ?,
-          quiet_hours_enabled = ?,
-          quiet_hours_start = ?,
-          quiet_hours_end = ?
-      WHERE user_id = ?
-    `, [
-      prefs.new_messages_enabled, 
-      prefs.system_updates_enabled, 
-      prefs.push_enabled,
-      prefs.email_enabled, 
-      prefs.report_updates_enabled, 
-      prefs.feedback_responses_enabled,
-      prefs.price_alerts_enabled, 
-      prefs.quiet_hours_enabled, 
-      prefs.quiet_hours_start,
-      prefs.quiet_hours_end, 
-      userId
-    ]);
+   
+    const existing = await query(`
+      SELECT * FROM user_notification_preferences WHERE user_id = ?
+    `, [userId]);
+
+    if (existing.length === 0) {
+      // INSERT new record
+      await query(`
+        INSERT INTO user_notification_preferences (
+          user_id,
+          new_messages_enabled,
+          system_updates_enabled,
+          push_enabled,
+          email_enabled,
+          report_updates_enabled,
+          feedback_responses_enabled,
+          price_alerts_enabled,
+          quiet_hours_enabled,
+          quiet_hours_start,
+          quiet_hours_end
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        userId,
+        prefs.new_messages_enabled ?? true,
+        prefs.system_updates_enabled ?? true,
+        prefs.push_enabled ?? true,
+        prefs.email_enabled ?? false,
+        prefs.report_updates_enabled ?? true,
+        prefs.feedback_responses_enabled ?? true,
+        prefs.price_alerts_enabled ?? false,
+        prefs.quiet_hours_enabled ?? false,
+        prefs.quiet_hours_start ?? '22:00',
+        prefs.quiet_hours_end ?? '08:00'
+      ]);
+    } else {
+      // UPDATE existing with null coalescing
+      await query(`
+        UPDATE user_notification_preferences
+        SET new_messages_enabled = ?,
+            system_updates_enabled = ?,
+            push_enabled = ?,
+            email_enabled = ?,
+            report_updates_enabled = ?,
+            feedback_responses_enabled = ?,
+            price_alerts_enabled = ?,
+            quiet_hours_enabled = ?,
+            quiet_hours_start = ?,
+            quiet_hours_end = ?
+        WHERE user_id = ?
+      `, [
+        prefs.new_messages_enabled ?? existing[0].new_messages_enabled,
+        prefs.system_updates_enabled ?? existing[0].system_updates_enabled,
+        prefs.push_enabled ?? existing[0].push_enabled,
+        prefs.email_enabled ?? existing[0].email_enabled,
+        prefs.report_updates_enabled ?? existing[0].report_updates_enabled,
+        prefs.feedback_responses_enabled ?? existing[0].feedback_responses_enabled,
+        prefs.price_alerts_enabled ?? existing[0].price_alerts_enabled,
+        prefs.quiet_hours_enabled ?? existing[0].quiet_hours_enabled,
+        prefs.quiet_hours_start ?? existing[0].quiet_hours_start,
+        prefs.quiet_hours_end ?? existing[0].quiet_hours_end,
+        userId
+      ]);
+    }
     
     res.json({ success: true, message: 'Settings saved' });
   } catch (error) {

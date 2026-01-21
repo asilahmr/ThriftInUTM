@@ -1,7 +1,9 @@
+
 const express = require('express');
 const router = express.Router();
 const notificationController = require('../controllers/notificationController');
 
+// Notification routes
 router.get('/:userId', notificationController.getNotifications);
 router.get('/:userId/unread-count', notificationController.getUnreadCount);
 router.put('/:notificationId/read', notificationController.markAsRead);

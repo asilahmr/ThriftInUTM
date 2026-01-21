@@ -1,5 +1,18 @@
-const { query } = require('../config/db');
+const db = require('../config/db'); // Import the whole connection object
 
+// Create a helper function that wraps the callback in a Promise
+const query = (sql, params) => {
+  return new Promise((resolve, reject) => {
+    db.query(sql, params, (err, result) => {
+      if (err) {
+        console.error('Database Error:', err);
+        reject(err);
+      } else {
+        resolve(result);
+      }
+    });
+  });
+};
 exports.submitFeedback = async (req, res) => {
   try {
     const { user_id, feedback_type, title, description, rating, category, platform, app_version, device_info } = req.body;

@@ -1,7 +1,4 @@
-// ============================================
-// Contact Support Screen
 // frontend/src/screens/help/ContactSupportScreen.js
-// ============================================
 import React, { useState } from 'react';
 import {
   View,
@@ -13,9 +10,8 @@ import {
   ActivityIndicator,
   Alert
 } from 'react-native';
+import api from '../../utils/api';
 import axios from 'axios';
-import API_BASE from '../../config';
-const API_URL = `${API_BASE}/api`;
 
 const ContactSupportScreen = ({ navigation, route }) => {
   const userId = route.params?.userId || 2;
@@ -30,7 +26,7 @@ const ContactSupportScreen = ({ navigation, route }) => {
     { value: 'technical', label: 'Technical Issue', icon: '🔧' },
     { value: 'account', label: 'Account Problem', icon: '👤' },
     { value: 'payment', label: 'Payment Issue', icon: '💳' },
-    { value: 'listing', label: 'Listing Problem', icon: '📝' },
+    { value: 'listing', label: 'Listing Problem', icon: '📚' },
     { value: 'safety', label: 'Safety Concern', icon: '🛡️' },
     { value: 'other', label: 'Other', icon: '❓' }
   ];
@@ -63,29 +59,48 @@ const ContactSupportScreen = ({ navigation, route }) => {
     
     setLoading(true);
     try {
-      const response = await axios.post(`${API_URL}/help/tickets`, {
+      const ticketData = {
         user_id: userId,
-        subject,
-        description,
+        subject: subject.trim(),
+        description: description.trim(),
         category,
         priority
-      });
+      };
+
+      console.log('🎫 Submitting ticket:', ticketData);
+
+      const response = await api.post('/help/tickets', ticketData);
       
       setLoading(false);
-      Alert.alert(
-        'Success',
-        `Your support ticket ${response.data.ticket_number} has been created. We'll respond within 24 hours.`,
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack()
-          }
-        ]
-      );
+      
+      if (response.data.success) {
+        Alert.alert(
+          'Success',
+          `Your support ticket ${response.data.ticket_number} has been created. We'll respond within 24 hours.`,
+          [
+            {
+              text: 'OK',
+              onPress: () => navigation.goBack()
+            }
+          ]
+        );
+        
+        // Reset form
+        setSubject('');
+        setDescription('');
+        setCategory('');
+        setPriority('normal');
+      }
     } catch (error) {
       console.error('Error submitting ticket:', error);
       setLoading(false);
-      Alert.alert('Error', 'Failed to submit ticket. Please try again.');
+      
+      const errorMessage = error.response?.data?.error || 
+                          error.message === 'Network Error' 
+                            ? 'Cannot connect to server. Please check your internet connection.' 
+                            : 'Failed to submit ticket. Please try again.';
+      
+      Alert.alert('Error', errorMessage);
     }
   };
 
@@ -180,9 +195,6 @@ const ContactSupportScreen = ({ navigation, route }) => {
   );
 };
 
-// ============================================
-// Shared Styles
-// ============================================
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -190,189 +202,6 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  searchContainer: {
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 16,
-    marginVertical: 12,
-    borderRadius: 24,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  searchIcon: {
-    fontSize: 18,
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#000',
-  },
-  clearIcon: {
-    fontSize: 18,
-    color: '#999',
-    padding: 4,
-  },
-  listContainer: {
-    padding: 16,
-  },
-  faqCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  featuredBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#FFF9E6',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-  featuredText: {
-    fontSize: 12,
-    color: '#FF9800',
-    fontWeight: '600',
-  },
-  question: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000000',
-    marginBottom: 8,
-  },
-  answerPreview: {
-    fontSize: 14,
-    color: '#666666',
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  faqMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  metaText: {
-    fontSize: 12,
-    color: '#999999',
-  },
-  metaBar: {
-    flexDirection: 'row',
-    gap: 16,
-    marginBottom: 20,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  readMore: {
-    fontSize: 12,
-    color: '#B71C1C',
-    fontWeight: '600',
-    marginLeft: 'auto',
-  },
-  answerContainer: {
-    backgroundColor: '#F9F9F9',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 24,
-  },
-  answer: {
-    fontSize: 16,
-    color: '#333333',
-    lineHeight: 24,
-  },
-  helpfulSection: {
-    backgroundColor: '#FFFFFF',
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 16,
-    alignItems: 'center',
-  },
-  helpfulTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 16,
-  },
-  helpfulButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  helpfulButton: {
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 24,
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
-    backgroundColor: '#FFFFFF',
-  },
-  helpfulButtonActive: {
-    borderColor: '#B71C1C',
-    backgroundColor: '#FFF5F5',
-  },
-  helpfulButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333333',
-  },
-  stillNeedHelp: {
-    backgroundColor: '#FFF5F5',
-    padding: 20,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  stillNeedHelpTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 12,
-  },
-  contactButton: {
-    backgroundColor: '#B71C1C',
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 24,
-  },
-  contactButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  emptyContainer: {
-    padding: 32,
-    alignItems: 'center',
-  },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#666666',
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#999999',
-    textAlign: 'center',
   },
   title: {
     fontSize: 24,
@@ -494,4 +323,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default  ContactSupportScreen ;
+export default ContactSupportScreen;

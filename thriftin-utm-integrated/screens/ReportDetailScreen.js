@@ -343,45 +343,56 @@ export default function ReportDetailScreen({ route, navigation }) {
                 </View>
 
                 {/* Evidence Section */}
-                <View style={styles.evidenceSection}>
-                    <View style={styles.evidenceHeader}>
-                      <Ionicons name="shield-outline" size={20} color="#DC2626" />
-                      <Text style={styles.evidenceTitle}>Evidence</Text>
-                    </View>
-  
-                    {report.evidence_path ? (
-                     <View style={styles.evidenceContent}>
-                        {report.evidence_type && report.evidence_type.startsWith('image/') ? (
-                          <View style={styles.evidenceImageContainer}>
-                           <Image 
-                              source={{ uri: `${api.defaults.baseURL}/${report.evidence_path}` }}
-                              style={styles.evidenceImage}
-                              resizeMode="contain"
-                            />
-                            <View style={styles.evidenceFooter}>
-                              <Ionicons name="image-outline" size={14} color="#6B7280" />
-                              <Text style={styles.evidenceFooterText}>Evidence image uploaded</Text>
-                            </View>
-                          </View>
-                        ) : (
-                          <View style={styles.evidenceFileContainer}>
-                            <Ionicons name="document-outline" size={20} color="#6B7280" />
-                            <Text style={styles.evidenceFileName}>
-                              {report.evidence_path.split('/').pop()}
-                            </Text>
-                            <Text style={styles.evidenceFileType}>
-                              {report.evidence_type || 'Unknown type'}
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                    ) : (
-                      <View style={styles.noEvidenceContainer}>
-                        <Ionicons name="alert-circle-outline" size={24} color="#9CA3AF" />
-                        <Text style={styles.noEvidenceText}>No evidence provided</Text>
-                      </View>
-                    )}
-                  </View>
+<View style={styles.evidenceSection}>
+  <View style={styles.evidenceHeader}>
+    <Ionicons name="shield-outline" size={20} color="#DC2626" />
+    <Text style={styles.evidenceTitle}>Evidence</Text>
+  </View>
+
+  {report.evidence_path ? (
+    <View style={styles.evidenceContent}>
+      {report.evidence_type && report.evidence_type.startsWith('image/') ? (
+        <View style={styles.evidenceImageContainer}>
+          <Image 
+            source={{ 
+              uri: `${api.defaults.baseURL}/${report.evidence_path.replace(/\\/g, '/')}`  // ✅ 處理 Windows 路徑
+            }}
+            style={styles.evidenceImage}
+            resizeMode="contain"
+            onError={(error) => {
+              console.log('❌ Image load error:', error.nativeEvent.error);
+              console.log('Image URI:', `${api.defaults.baseURL}/${report.evidence_path}`);
+            }}
+            onLoad={() => {
+              console.log('✅ Image loaded successfully');
+            }}
+          />
+          <View style={styles.evidenceFooter}>
+            <Ionicons name="image-outline" size={14} color="#6B7280" />
+            <Text style={styles.evidenceFooterText}>Evidence image uploaded</Text>
+          </View>
+        </View>
+      ) : (
+        <View style={styles.evidenceFileContainer}>
+          <Ionicons name="document-outline" size={20} color="#6B7280" />
+          <View style={{flex: 1, marginLeft: 8}}>
+            <Text style={styles.evidenceFileName}>
+              {report.evidence_path.split(/[/\\]/).pop()}  {/* ✅ 處理路徑分隔符 */}
+            </Text>
+            <Text style={styles.evidenceFileType}>
+              {report.evidence_type || 'Unknown type'}
+            </Text>
+          </View>
+        </View>
+      )}
+    </View>
+  ) : (
+    <View style={styles.noEvidenceContainer}>
+      <Ionicons name="alert-circle-outline" size={24} color="#9CA3AF" />
+      <Text style={styles.noEvidenceText}>No evidence provided</Text>
+    </View>
+  )}
+</View>
 
                 {/* Reporter Info */}
                 <View style={styles.reportFooter}>

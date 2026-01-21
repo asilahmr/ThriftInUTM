@@ -10,9 +10,8 @@ import {
   ActivityIndicator,
   Alert
 } from 'react-native';
+import api from '../../utils/api';
 import axios from 'axios';
-import API_BASE from '../../config';
-const API_URL = `${API_BASE}/api`;
 
 const NotificationSettingsScreen = ({ navigation, route }) => {
   const userId = route.params?.userId || 2;
@@ -32,15 +31,28 @@ const NotificationSettingsScreen = ({ navigation, route }) => {
   const fetchPreferences = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/notifications/preferences/${userId}`);
+      console.log('⚙️ Fetching preferences for user:', userId);
+      
+      const response = await api.get(`/notifications/preferences/${userId}`);
+      
+      console.log('✅ Received preferences:', response.data);
       setPreferences({
-        new_messages_enabled: response.data.new_messages_enabled,
-        system_updates_enabled: response.data.system_updates_enabled,
-        push_enabled: response.data.push_enabled
+        new_messages_enabled: response.data.new_messages_enabled ?? true,
+        system_updates_enabled: response.data.system_updates_enabled ?? true,
+        push_enabled: response.data.push_enabled ?? true
       });
       setLoading(false);
     } catch (error) {
       console.error('Error fetching preferences:', error);
+      
+      if (error.message === 'Network Error') {
+        Alert.alert(
+          'Connection Error',
+          'Cannot connect to server. Using default settings.',
+          [{ text: 'OK' }]
+        );
+      }
+      
       setLoading(false);
     }
   };
@@ -63,29 +75,31 @@ const NotificationSettingsScreen = ({ navigation, route }) => {
       return;
     }
 
+    const oldPreferences = { ...preferences };
+
     try {
       setSaving(true);
       setPreferences(newPreferences);
 
-      await axios.put(`${API_URL}/notifications/preferences/${userId}`, newPreferences);
+      console.log('💾 Updating preferences:', newPreferences);
 
-      // Show success toast
-      showToast('Settings saved');
+      await api.put(`/notifications/preferences/${userId}`, newPreferences);
+
+      console.log('✅ Preferences updated successfully');
       setSaving(false);
     } catch (error) {
       console.error('Error updating preferences:', error);
+      
       // Revert on error
-      setPreferences(preferences);
-      Alert.alert('Error', 'Failed to save settings. Please try again.');
+      setPreferences(oldPreferences);
+      
+      const errorMessage = error.message === 'Network Error' 
+        ? 'Cannot connect to server. Please check your internet connection.' 
+        : 'Failed to save settings. Please try again.';
+      
+      Alert.alert('Error', errorMessage);
       setSaving(false);
     }
-  };
-
-  const showToast = (message) => {
-    Alert.alert('', message, [{ text: 'OK' }], {
-      cancelable: true,
-      onDismiss: () => { }
-    });
   };
 
   const handleResetToDefault = () => {
@@ -106,9 +120,9 @@ const NotificationSettingsScreen = ({ navigation, route }) => {
 
             try {
               setSaving(true);
-              await axios.put(`${API_URL}/notifications/preferences/${userId}`, defaultPrefs);
+              await api.put(`/notifications/preferences/${userId}`, defaultPrefs);
               setPreferences(defaultPrefs);
-              showToast('Settings reset to default');
+              Alert.alert('Success', 'Settings reset to default');
               setSaving(false);
             } catch (error) {
               console.error('Error resetting preferences:', error);
@@ -261,7 +275,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5F5',
   },
-
   content: {
     flex: 1,
   },

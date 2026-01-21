@@ -57,24 +57,43 @@ export default function StudentReportUserScreen({ route, navigation }) {
     }
   };
 
-  const pickDocument = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: '*/*',
-        copyToCacheDirectory: true
-      });
+const pickDocument = async () => {
+  try {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: '*/*',
+      copyToCacheDirectory: true
+    });
 
-      if (result.type === 'success') {
-        setEvidence({
-          uri: result.uri,
-          type: 'document',
-          name: result.name
-        });
-      }
-    } catch (error) {
-      console.error('Error picking document:', error);
+    console.log('📄 Document picker result:', result);
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const file = result.assets[0];
+      console.log('✅ File selected:', {
+        name: file.name,
+        uri: file.uri,
+        mimeType: file.mimeType
+      });
+      
+      setEvidence({
+        uri: file.uri,
+        type: 'document',
+        name: file.name,
+        mimeType: file.mimeType || 'application/pdf'
+      });
+    } else if (result.type === 'success') {
+      console.log('✅ File selected (legacy):', result.name);
+      setEvidence({
+        uri: result.uri,
+        type: 'document',
+        name: result.name,
+        mimeType: result.mimeType || 'application/pdf'
+      });
     }
-  };
+  } catch (error) {
+    console.error('❌ Error picking document:', error);
+    Alert.alert('Error', 'Failed to pick document');
+  }
+};
 
   const removeEvidence = () => {
     setEvidence(null);
@@ -105,51 +124,65 @@ export default function StudentReportUserScreen({ route, navigation }) {
     );
   };
 
-  const submitReport = async () => {
-    try {
-      setSubmitting(true);
-      console.log('📤 Submitting report...');
+const submitReport = async () => {
+  try {
+    setSubmitting(true);
+    console.log('📤 Submitting report...');
 
-      const formData = new FormData();
-      formData.append('reporter_id', currentUserId);
-      formData.append('reporter_matric', currentUserMatric);
-      formData.append('reported_user_id', reportedUserId);
-      formData.append('reported_matric', reportedUserMatric);
-      formData.append('reason', selectedReason);
-      formData.append('description', description.trim());
+    const formData = new FormData();
+    formData.append('reporter_id', currentUserId);
+    formData.append('reporter_matric', currentUserMatric);
+    formData.append('reported_user_id', reportedUserId);
+    formData.append('reported_matric', reportedUserMatric);
+    formData.append('reason', selectedReason);
+    formData.append('description', description.trim());
+      
+    if (evidence) {
+      console.log('📎 Attaching evidence:', {
+        type: evidence.type,
+        name: evidence.name,
+        uri: evidence.uri
+      });
 
-      if (evidence) {
-        formData.append('evidence', {
-          uri: evidence.uri,
-          type: evidence.type === 'image' ? 'image/jpeg' : 'application/octet-stream',
-          name: evidence.name
-        });
-      }
-
-      const response = await api.post('/api/reports/submit', formData);
-
-      console.log('✅ Report submitted:', response.data);
-
-      Alert.alert(
-        'Report Submitted',
-        'Thank you for reporting. Our team will review this case.',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack()
-          }
-        ]
-      );
-    } catch (error) {
-      console.error('❌ Error submitting report:', error);
-      Alert.alert(
-        'Error',
-        error.response?.data?.error || 'Failed to submit report. Please try again.'
-      );
-    } finally {
-      setSubmitting(false);
+      formData.append('evidence', {
+        uri: evidence.uri,
+        type: evidence.type === 'image' 
+          ? 'image/jpeg' 
+          : (evidence.mimeType || 'application/octet-stream'),
+        name: evidence.name
+      });
     }
-  };
+
+    console.log('📤 Sending FormData to API...');
+    const response = await api.post('/api/reports/submit', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    console.log('✅ Report submitted:', response.data);
+
+    Alert.alert(
+      'Report Submitted',
+      'Thank you for reporting. Our team will review this case.',
+      [
+        {
+          text: 'OK',
+          onPress: () => navigation.goBack()
+        }
+      ]
+    );
+  } catch (error) {
+    console.error('❌ Error submitting report:', error);
+    console.error('Error details:', error.response?.data);
+    Alert.alert(
+      'Error',
+      error.response?.data?.error || 'Failed to submit report. Please try again.'
+    );
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   return (
     <View style={styles.container}>
@@ -243,32 +276,33 @@ export default function StudentReportUserScreen({ route, navigation }) {
 
           {!evidence ? (
             <View style={styles.uploadButtons}>
-              <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
+                <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
                 <Ionicons name="image-outline" size={24} color="#4B5563" />
                 <Text style={styles.uploadButtonText}>Upload Image</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.uploadButton} onPress={pickDocument}>
+            </TouchableOpacity>
+                <TouchableOpacity style={styles.uploadButton} onPress={pickDocument}>
                 <Ionicons name="document-outline" size={24} color="#4B5563" />
                 <Text style={styles.uploadButtonText}>Upload Document</Text>
-              </TouchableOpacity>
+                </TouchableOpacity>
             </View>
-          ) : (
+            ) : (
             <View style={styles.evidencePreview}>
-              {evidence.type === 'image' ? (
+                {evidence.type === 'image' ? (
                 <Image source={{ uri: evidence.uri }} style={styles.evidenceImage} />
-              ) : (
+                ) : (
                 <View style={styles.documentPreview}>
-                  <Ionicons name="document-text" size={48} color="#6B7280" />
-                  <Text style={styles.documentName} numberOfLines={2}>
+                    <Ionicons name="document-text" size={48} color="#6B7280" />
+                    <Text style={styles.documentName} numberOfLines={2}>
                     {evidence.name}
-                  </Text>
+                    </Text>
                 </View>
-              )}
-              <TouchableOpacity style={styles.removeButton} onPress={removeEvidence}>
+                )}
+                <TouchableOpacity style={styles.removeButton} onPress={removeEvidence}>
                 <Ionicons name="close-circle" size={24} color="#DC2626" />
-              </TouchableOpacity>
+                </TouchableOpacity>
             </View>
-          )}
+            )}
+
         </View>
 
         {/* Warning */}

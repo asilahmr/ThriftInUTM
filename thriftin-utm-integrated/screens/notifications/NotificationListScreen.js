@@ -10,9 +10,8 @@ import {
   RefreshControl,
   Alert
 } from 'react-native';
+import api from '../../utils/api';
 import axios from 'axios';
-import API_BASE from '../../config';
-const API_URL = `${API_BASE}/api`;
 
 const NotificationListScreen = ({ navigation, route }) => {
   const [notifications, setNotifications] = useState([]);
@@ -48,11 +47,25 @@ const NotificationListScreen = ({ navigation, route }) => {
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/notifications/${userId}`);
-      setNotifications(response.data);
+      console.log('📥 Fetching notifications for user:', userId);
+      
+      const response = await api.get(`/notifications/${userId}`);
+      
+      console.log('✅ Received notifications:', response.data?.length || 0);
+      setNotifications(response.data || []);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching notifications:', error);
+      
+      if (error.message === 'Network Error') {
+        Alert.alert(
+          'Connection Error',
+          'Cannot connect to server. Please check your internet connection.',
+          [{ text: 'OK' }]
+        );
+      }
+      
+      setNotifications([]);
       setLoading(false);
     }
   };
@@ -66,7 +79,7 @@ const NotificationListScreen = ({ navigation, route }) => {
   const handleNotificationPress = async (notification) => {
     try {
       // Mark as read
-      await axios.put(`${API_URL}/notifications/${notification.notification_id}/read`);
+      await api.put(`/notifications/${notification.notification_id}/read`);
 
       // Navigate to conversation
       navigation.navigate('ChatDetail', {
@@ -86,7 +99,7 @@ const NotificationListScreen = ({ navigation, route }) => {
 
   const handleMarkAllAsRead = async () => {
     try {
-      await axios.put(`${API_URL}/notifications/read-all/${userId}`);
+      await api.put(`/notifications/read-all/${userId}`);
       fetchNotifications();
       Alert.alert('Success', 'All notifications marked as read');
     } catch (error) {
@@ -133,32 +146,25 @@ const NotificationListScreen = ({ navigation, route }) => {
       onPress={() => handleNotificationPress(item)}
     >
       <View style={styles.avatarContainer}>
-        {item.sender_picture ? (
-          <Image
-            source={{ uri: item.sender_picture }}
-            style={styles.avatar}
-          />
-        ) : (
-          <View style={[
-            styles.avatar,
-            styles.avatarPlaceholder,
-            { backgroundColor: getAvatarColor(item.sender_id) }
-          ]}>
-            <Text style={styles.avatarText}>
-              {getInitials(item.sender_name)}
-            </Text>
-          </View>
-        )}
+        <View style={[
+          styles.avatar,
+          styles.avatarPlaceholder,
+          { backgroundColor: getAvatarColor(item.sender_id || 0) }
+        ]}>
+          <Text style={styles.avatarText}>
+            {getInitials(item.sender_name)}
+          </Text>
+        </View>
         {!item.is_read && <View style={styles.unreadDot} />}
       </View>
 
       <View style={styles.notificationContent}>
         <View style={styles.notificationHeader}>
-          <Text style={styles.senderName}>{item.sender_name}</Text>
+          <Text style={styles.senderName}>{item.sender_name || 'System'}</Text>
           <Text style={styles.timestamp}>{formatTime(item.created_at)}</Text>
         </View>
         <Text style={styles.messagePreview} numberOfLines={2}>
-          {item.message_preview}
+          {item.message_preview || item.title || 'New notification'}
         </Text>
         <View style={styles.actionButtons}>
           <Text style={styles.actionText}>
@@ -181,7 +187,6 @@ const NotificationListScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-
       {unreadCount > 0 && (
         <View style={styles.actionBar}>
           <Text style={styles.unreadCountText}>
@@ -196,7 +201,7 @@ const NotificationListScreen = ({ navigation, route }) => {
       <FlatList
         data={notifications}
         renderItem={renderNotificationItem}
-        keyExtractor={item => item.notification_id.toString()}
+        keyExtractor={item => item.notification_id?.toString() || Math.random().toString()}
         contentContainerStyle={styles.listContainer}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
