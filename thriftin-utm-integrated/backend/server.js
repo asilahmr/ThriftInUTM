@@ -61,6 +61,230 @@ const notificationRoutes = require('./routes/notifications');
 const feedbackRoutes = require('./routes/feedback');
 const helpRoutes = require('./routes/helpCenter'); 
 
+
+// ==================== NOTIFICATION ROUTES (INLINE) ====================
+// Add this section to your main server.js where you mount routes
+// This bypasses the external router module to avoid any import issues
+
+console.log('📍 Mounting inline notification routes...');
+
+// Helper function for database queries
+const notificationQuery = (sql, params) => {
+  return new Promise((resolve, reject) => {
+    db.query(sql, params, (err, result) => {
+      if (err) {
+        console.error('Database query error:', err);
+        reject(err);
+      } else {
+        resolve(result);
+      }
+    });
+  });
+};
+
+// Test endpoint
+app.get('/api/notifications/test', (req, res) => {
+  console.log('📍 Test endpoint hit');
+  res.json({ 
+    success: true, 
+    message: 'Notification routes are working!',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Get preferences (must come before /:userId to avoid route conflict)
+app.get('/api/notifications/preferences/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    console.log('⚙️ Getting preferences for user:', userId);
+    
+    let prefs = await notificationQuery(`
+      SELECT * FROM user_notification_preferences WHERE user_id = ?
+    `, [userId]);
+    
+    if (prefs.length === 0) {
+      console.log('📝 Creating default preferences');
+      await notificationQuery(`
+        INSERT INTO user_notification_preferences (
+          user_id, new_messages_enabled, system_updates_enabled, push_enabled
+        ) VALUES (?, 1, 1, 1)
+      `, [userId]);
+      
+      prefs = await notificationQuery(`
+        SELECT * FROM user_notification_preferences WHERE user_id = ?
+      `, [userId]);
+    }
+    
+    console.log('✅ Preferences retrieved');
+    res.json(prefs[0]);
+  } catch (error) {
+    console.error('❌ Error getting preferences:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update preferences
+app.put('/api/notifications/preferences/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const prefs = req.body;
+    console.log('💾 Updating preferences for user:', userId, prefs);
+    
+    const existing = await notificationQuery(`
+      SELECT * FROM user_notification_preferences WHERE user_id = ?
+    `, [userId]);
+    
+    if (existing.length === 0) {
+      await notificationQuery(`
+        INSERT INTO user_notification_preferences (
+          user_id, new_messages_enabled, system_updates_enabled, push_enabled
+        ) VALUES (?, ?, ?, ?)
+      `, [
+        userId, 
+        prefs.new_messages_enabled ?? true, 
+        prefs.system_updates_enabled ?? true, 
+        prefs.push_enabled ?? true
+      ]);
+    } else {
+      await notificationQuery(`
+        UPDATE user_notification_preferences
+        SET new_messages_enabled = ?,
+            system_updates_enabled = ?,
+            push_enabled = ?
+        WHERE user_id = ?
+      `, [
+        prefs.new_messages_enabled ?? existing[0].new_messages_enabled,
+        prefs.system_updates_enabled ?? existing[0].system_updates_enabled,
+        prefs.push_enabled ?? existing[0].push_enabled,
+        userId
+      ]);
+    }
+    
+    console.log('✅ Preferences updated');
+    res.json({ success: true, message: 'Settings saved' });
+  } catch (error) {
+    console.error('❌ Error updating preferences:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get unread count (must come before /:userId)
+app.get('/api/notifications/:userId/unread-count', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    console.log('📊 Getting unread count for user:', userId);
+    
+    const result = await notificationQuery(`
+      SELECT COUNT(*) as count FROM notifications
+      WHERE user_id = ? AND is_read = FALSE
+    `, [userId]);
+    
+    console.log('✅ Unread count:', result[0].count);
+    res.json({ count: result[0].count });
+  } catch (error) {
+    console.error('❌ Error getting unread count:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Mark all as read (must come before /:notificationId)
+app.put('/api/notifications/read-all/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    console.log('✓ Marking all notifications as read for user:', userId);
+    
+    const result = await notificationQuery(`
+      UPDATE notifications
+      SET is_read = TRUE, read_at = CURRENT_TIMESTAMP
+      WHERE user_id = ? AND is_read = FALSE
+    `, [userId]);
+    
+    console.log('✅ Marked all as read');
+    res.json({ success: true, count: result.affectedRows });
+  } catch (error) {
+    console.error('❌ Error marking all as read:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Mark single notification as read
+app.put('/api/notifications/:notificationId/read', async (req, res) => {
+  try {
+    const { notificationId } = req.params;
+    console.log('✓ Marking notification as read:', notificationId);
+    
+    await notificationQuery(`
+      UPDATE notifications
+      SET is_read = TRUE, read_at = CURRENT_TIMESTAMP
+      WHERE notification_id = ?
+    `, [notificationId]);
+    
+    console.log('✅ Marked as read');
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ Error marking as read:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete notification
+app.delete('/api/notifications/:notificationId', async (req, res) => {
+  try {
+    const { notificationId } = req.params;
+    console.log('🗑️ Deleting notification:', notificationId);
+    
+    await notificationQuery(`
+      DELETE FROM notifications WHERE notification_id = ?
+    `, [notificationId]);
+    
+    console.log('✅ Notification deleted');
+    res.json({ success: true, message: 'Notification deleted' });
+  } catch (error) {
+    console.error('❌ Error deleting notification:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get notifications (MUST BE LAST among /:userId patterns)
+app.get('/api/notifications/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { type, limit = 50 } = req.query;
+    console.log('📥 Getting notifications for user:', userId);
+    
+    let sql = `
+      SELECT 
+        n.*,
+        u.username as sender_name
+      FROM notifications n
+      LEFT JOIN user u ON n.sender_id = u.id
+      WHERE n.user_id = ?
+    `;
+    
+    const params = [userId];
+    
+    if (type) {
+      sql += ` AND n.notification_type = ?`;
+      params.push(type);
+    }
+    
+    sql += ` ORDER BY n.created_at DESC LIMIT ?`;
+    params.push(parseInt(limit));
+    
+    const notifications = await notificationQuery(sql, params);
+    
+    console.log(`✅ Found ${notifications.length} notifications`);
+    res.json(notifications);
+  } catch (error) {
+    console.error('❌ Error getting notifications:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+console.log('✅ Inline notification routes mounted');
+
+// ==================== END NOTIFICATION ROUTES ====================
+
 // ==================== MOUNT ROUTES ====================
 // routes
 app.use('/api/account', accountRoutes);
@@ -80,7 +304,7 @@ app.use('/api/sales', salesRoutes);
 app.use('/api/buying', buyingRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/messages', messageRoutes);
-app.use('/api/notifications', notificationRoutes);
+app.use('/api/notifications', notificationRoutes); // app.use('/api/notifications', notificationRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/feedback', feedbackRoutes);
@@ -780,7 +1004,14 @@ app.use((err, req, res, next) => {
   });
 });
 
+app.use((req, res) => {
+     res.status(404).json({ message: 'Route not found' });
+   });
 // ==================== START SERVER ====================
 
 // Start the server
-app.listen(3000, () => console.log("Server running on port 3000"));
+
+app.listen(3000, () => {
+  console.log("✅ Server running on port 3000");
+  console.log("📡 Notification routes available at: http://localhost:3000/api/notifications");
+});
