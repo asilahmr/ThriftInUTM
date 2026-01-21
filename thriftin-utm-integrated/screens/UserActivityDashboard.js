@@ -41,7 +41,8 @@ const isSameMonth = (d1, d2) => {
 };
 
 // ---------- Aggregation ----------
-function aggregate(activities, totalRegisteredUsers = 0, timeFilter = 'all') {
+// ---------- Aggregation ----------
+function aggregate(activities, totalRegisteredUsers = 0, timeFilter = 'all', selectedMonth = null, selectedYear = null) {
   // If totalRegisteredUsers is passed (from server), use it. 
   // Otherwise fallback to unique users in the activity list.
   const uniqueInList = new Set(activities.map((a) => a.userId)).size;
@@ -101,6 +102,31 @@ function aggregate(activities, totalRegisteredUsers = 0, timeFilter = 'all') {
     });
     for (let d = 1; d <= daysInMonth; d++) {
       tooltipLabels.push(`${d} ${monthName}`);
+    }
+
+  } else if (timeFilter === 'month') {
+    // Specific Selected Month
+    const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+    // Month name from selectedMonth (1-indexed)
+    const dObj = new Date(selectedYear, selectedMonth - 1, 1);
+    const monthName = dObj.toLocaleString('default', { month: 'long' });
+
+    labels = Array(daysInMonth).fill("");
+    counts = Array(daysInMonth).fill(0);
+
+    activities.forEach(a => {
+      const d = parseDate(a.date);
+      // Double check it belongs to this month/year (already filtered, but safe to check)
+      if (d.getMonth() + 1 === selectedMonth && d.getFullYear() === selectedYear) {
+        const day = d.getDate();
+        if (day >= 1 && day <= daysInMonth) {
+          counts[day - 1] += (a.sessions || 0);
+        }
+      }
+    });
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      tooltipLabels.push(`${d} ${monthName} ${selectedYear}`);
     }
 
   } else {
@@ -167,12 +193,17 @@ export default function UserActivityDashboard() {
   const [dashboardLabel, setDashboardLabel] = useState("All Time");
 
   // Filters State
-  const [timeFilter, setTimeFilter] = useState('all'); // 'today', 'thisMonth', 'all'
+  const [timeFilter, setTimeFilter] = useState('all'); // 'today', 'thisMonth', 'all', 'month'
   const [degreeFilter, setDegreeFilter] = useState('All');
   const [yearFilter, setYearFilter] = useState('All');
 
+  // Custom Month Filter State
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
   const [filteredActivities, setFilteredActivities] = useState([]);
   const [filteredAgg, setFilteredAgg] = useState({});
+  const [filteredDemographicsData, setFilteredDemographicsData] = useState([]); // Users filtered by time
 
   const [selectedIndex, setSelectedIndex] = useState(null);
   const clickHandledRef = useRef(false);
@@ -212,8 +243,12 @@ export default function UserActivityDashboard() {
 
         // Initial Apply
         setFilteredActivities(activities);
-        // Pass 'all' default
-        setFilteredAgg(aggregate(activities, tUsers, 'all'));
+        setFilteredDemographicsData(data.userDemographics || []);
+        // Initial Apply
+        setFilteredActivities(activities);
+        setFilteredDemographicsData(data.userDemographics || []);
+        // Pass 'all' default - use serverTotalUsers initially as 'all time'
+        setFilteredAgg(aggregate(activities, tUsers, 'all', null, null));
         setLoading(false);
       })
       .catch(err => {
@@ -238,6 +273,14 @@ export default function UserActivityDashboard() {
     } else if (timeKey === "thisMonth") {
       subset = subset.filter(a => isSameMonth(parseDate(a.date), now));
       setDashboardLabel("This Month");
+    } else if (timeKey === "month") {
+      // Filter by specific selectedMonth and selectedYear
+      subset = subset.filter(a => {
+        const d = parseDate(a.date);
+        return (d.getMonth() + 1) === selectedMonth && d.getFullYear() === selectedYear;
+      });
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      setDashboardLabel(`${months[selectedMonth - 1]} ${selectedYear}`);
     } else {
       setDashboardLabel("All Time");
     }
@@ -252,8 +295,31 @@ export default function UserActivityDashboard() {
       subset = subset.filter(a => getYearOfStudy(a.enrollment_year) === yearKey);
     }
 
+    // Unified User Filtering based on time (created_at <= end of period)
+    let userSubset = userDemographics || [];
+    let cutoffDate = new Date(); // Default to Now (All Time/Today)
+
+    if (timeKey === "thisMonth") {
+      // For "This Month", we count users registered UP TO now (or end of this month)
+      cutoffDate = now;
+    } else if (timeKey === "month") {
+      // End of Selected Month
+      cutoffDate = new Date(selectedYear, selectedMonth, 0, 23, 59, 59); // Last day of month
+    } else if (timeKey === "today") {
+      cutoffDate = now;
+    }
+
+    // Filter Users: Created before cutoff
+    userSubset = userSubset.filter(u => {
+      const created = u.created_at ? new Date(u.created_at) : new Date(0); // If null, assume old
+      return created <= cutoffDate;
+    });
+
     setFilteredActivities(subset);
-    setFilteredAgg(aggregate(subset, serverTotalUsers, timeKey)); // Pass timeKey to aggregate
+    // Recalculate Total Users dynamically based on time filter
+    setFilteredAgg(aggregate(subset, userSubset.length, timeKey, selectedMonth, selectedYear));
+    // Store filtered users for demographics chart
+    setFilteredDemographicsData(userSubset);
   };
 
   const handleApplyFilter = () => {
@@ -298,7 +364,7 @@ export default function UserActivityDashboard() {
   };
 
   const filteredDemographics = useMemo(() => {
-    let subset = userDemographics || [];
+    let subset = filteredDemographicsData || []; // Use time-filtered users
     if (degreeFilter !== 'All') {
       subset = subset.filter(u => u.degree_type === degreeFilter);
     }
@@ -690,7 +756,7 @@ export default function UserActivityDashboard() {
               <ScrollView>
                 <Text style={{ fontSize: 16, fontWeight: '600', marginTop: 10, marginBottom: 8 }}>Time Period</Text>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                  {['today', 'thisMonth', 'all'].map(t => (
+                  {['today', 'thisMonth', 'all', 'month'].map(t => (
                     <TouchableOpacity key={t}
                       onPress={() => setTimeFilter(t)}
                       style={{
@@ -698,11 +764,55 @@ export default function UserActivityDashboard() {
                         backgroundColor: timeFilter === t ? '#B71C1C' : '#f0f0f0'
                       }}>
                       <Text style={{ color: timeFilter === t ? '#fff' : '#333', capitalize: 'yes' }}>
-                        {t === 'today' ? 'Today' : t === 'thisMonth' ? 'This Month' : 'All Time'}
+                        {t === 'today' ? 'Today' : t === 'thisMonth' ? 'This Month' : t === 'all' ? 'All Time' : 'Select Month'}
                       </Text>
                     </TouchableOpacity>
                   ))}
                 </View>
+
+                {/* Custom Month Picker */}
+                {timeFilter === 'month' && (
+                  <View style={{ marginTop: 10, padding: 10, backgroundColor: '#fafafa', borderRadius: 12, flexDirection: 'row' }}>
+                    <View style={{ flex: 1, marginRight: 10 }}>
+                      <Text style={{ fontSize: 14, color: '#666', marginBottom: 8, fontWeight: '600' }}>Year</Text>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                        {[...Array(5)].map((_, i) => {
+                          const y = new Date().getFullYear() - i;
+                          return (
+                            <TouchableOpacity key={y} onPress={() => setSelectedYear(y)}
+                              style={{
+                                paddingVertical: 6, paddingHorizontal: 12, marginRight: 8, borderRadius: 8, borderWidth: 1,
+                                borderColor: selectedYear === y ? '#B71C1C' : '#ddd',
+                                backgroundColor: selectedYear === y ? '#B71C1C' : '#fff'
+                              }}>
+                              <Text style={{ color: selectedYear === y ? '#fff' : '#333' }}>{y}</Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </ScrollView>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14, color: '#666', marginBottom: 8, fontWeight: '600' }}>Month</Text>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                        {[
+                          { val: 1, name: 'Jan' }, { val: 2, name: 'Feb' }, { val: 3, name: 'Mar' },
+                          { val: 4, name: 'Apr' }, { val: 5, name: 'May' }, { val: 6, name: 'Jun' },
+                          { val: 7, name: 'Jul' }, { val: 8, name: 'Aug' }, { val: 9, name: 'Sep' },
+                          { val: 10, name: 'Oct' }, { val: 11, name: 'Nov' }, { val: 12, name: 'Dec' }
+                        ].map(m => (
+                          <TouchableOpacity key={m.val} onPress={() => setSelectedMonth(m.val)}
+                            style={{
+                              paddingVertical: 6, paddingHorizontal: 12, marginRight: 8, borderRadius: 8, borderWidth: 1,
+                              borderColor: selectedMonth === m.val ? '#B71C1C' : '#ddd',
+                              backgroundColor: selectedMonth === m.val ? '#B71C1C' : '#fff'
+                            }}>
+                            <Text style={{ color: selectedMonth === m.val ? '#fff' : '#333' }}>{m.name}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  </View>
+                )}
 
                 <Text style={{ fontSize: 16, fontWeight: '600', marginTop: 16, marginBottom: 8 }}>Degree Type</Text>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>

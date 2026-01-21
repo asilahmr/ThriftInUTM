@@ -60,6 +60,7 @@ router.get('/user/:userId', async (req, res) => {
             WHERE o.buyer_id = ? AND o.order_status = 'completed' ${itemFilter.clause}
             GROUP BY p.category
             ORDER BY totalSpent DESC
+            LIMIT 5
         `;
         const categoriesResult = await db.query(catQuery, [userId, ...itemFilter.params]);
 
@@ -131,6 +132,7 @@ router.get('/admin', requireAdmin, async (req, res) => {
             WHERE o.order_status = 'completed' ${itemFilter.clause}
             GROUP BY p.category
             ORDER BY totalSpent DESC
+            LIMIT 5
         `;
         const categoriesResult = await db.query(catQuery, itemFilter.params);
 

@@ -63,7 +63,7 @@ router.get('/user/:userId', async (req, res) => {
     const filter = buildDateFilter(req, 'o.order_date');
 
     revenueQuery += filter.clause;
-    categoriesQuery += filter.clause + ` GROUP BY p.category ORDER BY items_sold DESC`;
+    categoriesQuery += filter.clause + ` GROUP BY p.category ORDER BY items_sold DESC LIMIT 5`;
 
     // Combine params
     const queryParams = [userId, ...filter.params];
@@ -110,6 +110,7 @@ router.get('/admin', requireAdmin, async (req, res) => {
       WHERE o.order_status = 'completed' ${filter.clause}
       GROUP BY p.category
       ORDER BY items_sold DESC
+      LIMIT 5
     `;
 
     let topSellersQuery = `

@@ -29,7 +29,7 @@ exports.getActivityAnalytics = async (req, res) => {
 
     // 3. Demographics
     const demographicsResult = await db.query(`
-      SELECT s.degree_type, s.enrollment_year
+      SELECT s.degree_type, s.enrollment_year, u.created_at
       FROM students s
       JOIN user u ON s.user_id = u.id
       WHERE u.user_type = 'student'
