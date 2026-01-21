@@ -11,7 +11,6 @@ import {
   Alert
 } from 'react-native';
 import api from '../../utils/api';
-import axios from 'axios';
 
 const NotificationSettingsScreen = ({ navigation, route }) => {
   const userId = route.params?.userId || 2;
@@ -33,6 +32,7 @@ const NotificationSettingsScreen = ({ navigation, route }) => {
       setLoading(true);
       console.log('⚙️ Fetching preferences for user:', userId);
       
+      // Fixed: Correct API path
       const response = await api.get(`/notifications/preferences/${userId}`);
       
       console.log('✅ Received preferences:', response.data);
@@ -43,12 +43,29 @@ const NotificationSettingsScreen = ({ navigation, route }) => {
       });
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching preferences:', error);
+      console.error('❌ Error fetching preferences:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       
-      if (error.message === 'Network Error') {
+      if (error.response?.status === 404) {
+        Alert.alert(
+          'Not Found',
+          'Preferences endpoint not found. Please check server configuration.',
+          [{ text: 'OK' }]
+        );
+      } else if (error.message === 'Network Error') {
         Alert.alert(
           'Connection Error',
           'Cannot connect to server. Using default settings.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert(
+          'Error',
+          error.response?.data?.message || 'Failed to load settings',
           [{ text: 'OK' }]
         );
       }
@@ -83,19 +100,29 @@ const NotificationSettingsScreen = ({ navigation, route }) => {
 
       console.log('💾 Updating preferences:', newPreferences);
 
+      // Fixed: Correct API path
       await api.put(`/notifications/preferences/${userId}`, newPreferences);
 
       console.log('✅ Preferences updated successfully');
       setSaving(false);
     } catch (error) {
-      console.error('Error updating preferences:', error);
+      console.error('❌ Error updating preferences:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       
       // Revert on error
       setPreferences(oldPreferences);
       
-      const errorMessage = error.message === 'Network Error' 
-        ? 'Cannot connect to server. Please check your internet connection.' 
-        : 'Failed to save settings. Please try again.';
+      let errorMessage = 'Failed to save settings. Please try again.';
+      
+      if (error.message === 'Network Error') {
+        errorMessage = 'Cannot connect to server. Please check your internet connection.';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
       
       Alert.alert('Error', errorMessage);
       setSaving(false);
@@ -125,7 +152,7 @@ const NotificationSettingsScreen = ({ navigation, route }) => {
               Alert.alert('Success', 'Settings reset to default');
               setSaving(false);
             } catch (error) {
-              console.error('Error resetting preferences:', error);
+              console.error('❌ Error resetting preferences:', error);
               Alert.alert('Error', 'Failed to reset settings');
               setSaving(false);
             }
@@ -139,6 +166,7 @@ const NotificationSettingsScreen = ({ navigation, route }) => {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#B71C1C" />
+        <Text style={styles.loadingText}>Loading settings...</Text>
       </View>
     );
   }
@@ -412,6 +440,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#666666',
   },
   savingOverlay: {
     position: 'absolute',

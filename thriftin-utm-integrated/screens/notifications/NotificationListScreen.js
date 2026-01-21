@@ -11,7 +11,6 @@ import {
   Alert
 } from 'react-native';
 import api from '../../utils/api';
-import axios from 'axios';
 
 const NotificationListScreen = ({ navigation, route }) => {
   const [notifications, setNotifications] = useState([]);
@@ -49,18 +48,36 @@ const NotificationListScreen = ({ navigation, route }) => {
       setLoading(true);
       console.log('📥 Fetching notifications for user:', userId);
       
+      // Fixed: Correct API path
       const response = await api.get(`/notifications/${userId}`);
       
       console.log('✅ Received notifications:', response.data?.length || 0);
       setNotifications(response.data || []);
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching notifications:', error);
+      console.error('❌ Error fetching notifications:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       
-      if (error.message === 'Network Error') {
+      if (error.response?.status === 404) {
+        Alert.alert(
+          'Not Found',
+          'Notification endpoint not found. Please check server configuration.',
+          [{ text: 'OK' }]
+        );
+      } else if (error.message === 'Network Error') {
         Alert.alert(
           'Connection Error',
           'Cannot connect to server. Please check your internet connection.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert(
+          'Error',
+          error.response?.data?.message || 'Failed to load notifications',
           [{ text: 'OK' }]
         );
       }
@@ -81,19 +98,22 @@ const NotificationListScreen = ({ navigation, route }) => {
       // Mark as read
       await api.put(`/notifications/${notification.notification_id}/read`);
 
-      // Navigate to conversation
-      navigation.navigate('ChatDetail', {
-        conversationId: notification.conversation_id,
-        otherUserId: notification.sender_id,
-        otherUsername: notification.sender_name,
-        isAI: false,
-        userId: userId
-      });
+      // Navigate to conversation if it's a message notification
+      if (notification.conversation_id && notification.sender_id) {
+        navigation.navigate('ChatDetail', {
+          conversationId: notification.conversation_id,
+          otherUserId: notification.sender_id,
+          otherUsername: notification.sender_name,
+          isAI: false,
+          userId: userId
+        });
+      }
 
       // Refresh notifications
       fetchNotifications();
     } catch (error) {
-      console.error('Error handling notification:', error);
+      console.error('❌ Error handling notification:', error);
+      Alert.alert('Error', 'Failed to open notification');
     }
   };
 
@@ -103,7 +123,7 @@ const NotificationListScreen = ({ navigation, route }) => {
       fetchNotifications();
       Alert.alert('Success', 'All notifications marked as read');
     } catch (error) {
-      console.error('Error marking all as read:', error);
+      console.error('❌ Error marking all as read:', error);
       Alert.alert('Error', 'Failed to mark all as read');
     }
   };
@@ -134,7 +154,7 @@ const NotificationListScreen = ({ navigation, route }) => {
 
   const getAvatarColor = (userId) => {
     const colors = ['#B71C1C', '#1976D2', '#388E3C', '#F57C00', '#7B1FA2'];
-    return colors[userId % colors.length];
+    return colors[(userId || 0) % colors.length];
   };
 
   const renderNotificationItem = ({ item }) => (
@@ -179,6 +199,7 @@ const NotificationListScreen = ({ navigation, route }) => {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#B71C1C" />
+        <Text style={styles.loadingText}>Loading notifications...</Text>
       </View>
     );
   }
@@ -328,6 +349,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#666666',
   },
   emptyContainer: {
     flex: 1,
