@@ -18,15 +18,16 @@ class OrderModel {
 
   // Get seller information for a product
   static async getSellerInfo(sellerId) {
-    const query = `
-      SELECT user_id, name, email
-      FROM user
-      WHERE id = ?
-    `;
+  const query = `
+    SELECT u.id, s.name, u.email
+    FROM user u
+    LEFT JOIN students s ON u.id = s.user_id
+    WHERE u.id = ?
+  `;
 
-    const [rows] = await db.execute(query, [sellerId]);
-    return rows.length > 0 ? rows[0] : null;
-  }
+  const [rows] = await db.execute(query, [sellerId]);
+  return rows.length > 0 ? rows[0] : null;
+}
 
   // Create order with wallet payment (atomic transaction)
   static async createOrder(buyerId, productId) {
@@ -37,11 +38,12 @@ class OrderModel {
 
       // 1. Check product is still available (with row lock)
       const [productRows] = await connection.execute(
-        `SELECT p.*, u.name as seller_name, u.email as seller_email 
-         FROM products p
-         JOIN user u ON p.seller_id = u.id
-         WHERE p.product_id = ? AND p.status = 'active' AND p.seller_id != ?
-         FOR UPDATE`,
+        `SELECT p.*, s.name as seller_name, u.email as seller_email 
+        FROM products p
+        JOIN user u ON p.seller_id = u.id
+        LEFT JOIN students s ON u.id = s.user_id
+        WHERE p.product_id = ? AND p.status = 'active' AND p.seller_id != ?
+        FOR UPDATE`,
         [productId, buyerId]
       );
 

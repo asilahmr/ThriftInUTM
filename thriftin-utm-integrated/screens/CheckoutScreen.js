@@ -51,25 +51,19 @@ const CheckoutScreen = ({ route, navigation }) => {
     );
   }
 
-  if (!checkoutData) {
-    return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>Failed to load checkout</Text>
-      </View>
-    );
-  }
+      if (!checkoutData || !checkoutData.data) {
+      return (
+        <View style={styles.centered}>
+          <Text style={styles.errorText}>Failed to load checkout</Text>
+        </View>
+      );
+    }
 
-  const { product, seller, total_amount } = checkoutData;
+    const { product, seller, total_amount } = checkoutData.data;
 
   return (
     <View style={styles.container}>
       <ScrollView style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Review Your Order</Text>
-          <Text style={styles.headerSubtitle}>Please confirm details before payment</Text>
-        </View>
-
         {/* Product Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Product Details</Text>
@@ -99,12 +93,12 @@ const CheckoutScreen = ({ route, navigation }) => {
           <View style={styles.sellerCard}>
             <View style={styles.sellerAvatar}>
               <Text style={styles.sellerAvatarText}>
-                {seller.name.charAt(0).toUpperCase()}
+                {seller?.name ? seller.name.charAt(0).toUpperCase() : seller?.email?.charAt(0).toUpperCase() || 'S'}
               </Text>
             </View>
             <View style={styles.sellerInfo}>
-              <Text style={styles.sellerName}>{seller.name}</Text>
-              <Text style={styles.sellerEmail}>{seller.email}</Text>
+              <Text style={styles.sellerName}>{seller?.name || 'Seller'}</Text>
+              <Text style={styles.sellerEmail}>{seller?.email || 'No email'}</Text>
             </View>
           </View>
         </View>

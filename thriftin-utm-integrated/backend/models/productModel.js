@@ -76,37 +76,36 @@ class ProductModel {
     }));
   }
 
-  // Get single product by ID
   static async getProductById(productId, sellerId = null) {
-    let query = `
-      SELECT 
-        p.*,
-        u.name as seller_name,
-        u.email as seller_email
-      FROM products p
-      JOIN user u ON p.seller_id = u.id
-      WHERE p.product_id = ? AND p.status = 'active'
-    `;
+  let query = `
+    SELECT 
+      p.*,
+      s.name AS seller_name,
+      u.email AS seller_email
+    FROM products p
+    JOIN user u ON p.seller_id = u.id
+    LEFT JOIN students s ON s.user_id = u.id
+    WHERE p.product_id = ? AND p.status = 'active'
+  `;
 
-    const params = [productId];
+  const params = [productId];
 
-    if (sellerId) {
-      query += ' AND p.seller_id = ?';
-      params.push(sellerId);
-    }
-
-    const [rows] = await db.execute(query, params);
-
-    if (rows.length === 0) return null;
-
-    // Get images
-    const [images] = await db.execute(
-      'SELECT * FROM product_images WHERE product_id = ? ORDER BY is_primary DESC',
-      [productId]
-    );
-
-    return { ...rows[0], images };
+  if (sellerId) {
+    query += ' AND p.seller_id = ?';
+    params.push(sellerId);
   }
+
+  const [rows] = await db.execute(query, params);
+
+  if (rows.length === 0) return null;
+
+  const [images] = await db.execute(
+    'SELECT * FROM product_images WHERE product_id = ? ORDER BY is_primary DESC',
+    [productId]
+  );
+
+  return { ...rows[0], images };
+}
 
   // Edit Product Details
   static async updateProduct(productId, sellerId, updateData) {

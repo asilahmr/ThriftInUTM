@@ -37,7 +37,7 @@ class OrderController {
             description: product.description
           },
           seller: {
-            seller_id: seller.user_id,
+            seller_id: seller.id,
             name: seller.name,
             email: seller.email
           },

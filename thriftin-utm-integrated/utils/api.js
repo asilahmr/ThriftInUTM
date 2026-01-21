@@ -7,7 +7,7 @@ console.log('📍 Base URL:', config?.baseURL);
 
 // axios instance
 const api = axios.create({
-  baseURL: config?.baseURL || 'http://172.20.10.4:3000' + '/api',  
+  baseURL: config?.baseURL || 'http://10.134.246.207:3000' + '/api',  
   
   timeout: 180000,
 });
