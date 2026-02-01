@@ -9,6 +9,7 @@ import { COLORS } from '../utils/constants';
 
 const PaymentScreen = ({ route, navigation }) => {
   const { productId, checkoutData } = route.params;
+  const { product, seller, total_amount } = checkoutData.data;
   const [walletBalance, setWalletBalance] = useState(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
@@ -18,21 +19,26 @@ const PaymentScreen = ({ route, navigation }) => {
   }, []);
 
   const fetchWalletBalance = async () => {
-    try {
-      console.log('💰 Fetching wallet balance...');
-      const response = await walletApi.getBalance();
-      console.log('✅ Wallet balance loaded:', response.data);
-      setWalletBalance(response.data);
-    } catch (error) {
-      console.error('❌ Wallet balance error:', error);
-      Alert.alert('Error', 'Failed to load wallet balance');
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    console.log('💰 Fetching wallet balance...');
+    const response = await walletApi.getBalance();
+    console.log('✅ Wallet balance loaded:', response.data);
+    
+    // Fix: Handle the nested data structure
+    const balanceData = response.data.data || response.data;
+    console.log('✅ Actual balance data:', balanceData);
+    
+    setWalletBalance(balanceData);
+  } catch (error) {
+    console.error('❌ Wallet balance error:', error);
+    Alert.alert('Error', 'Failed to load wallet balance');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handlePayWithWallet = async () => {
-    const orderAmount = parseFloat(checkoutData.total_amount);
+    const orderAmount = parseFloat(total_amount);
     const currentBalance = parseFloat(walletBalance.balance);
 
     // Check sufficient balance
@@ -67,72 +73,74 @@ const PaymentScreen = ({ route, navigation }) => {
   };
 
   const processWalletPayment = async () => {
-    setProcessing(true);
+  setProcessing(true);
 
-    try {
-      // Simulate 2-second payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
+  try {
+    // Simulate 2-second payment processing
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
-      console.log('💳 Processing wallet payment...');
-      const response = await orderApi.processPayment(productId);
-      console.log('✅ Payment successful:', response.data);
+    console.log('💳 Processing wallet payment...');
+    const response = await orderApi.processPayment(productId);
+    console.log('✅ Payment successful:', response.data);
 
-      // Navigate to success/receipt screen
+    const orderId = response.data.data.order_id;
+    
+    // Navigate to success/receipt screen
+    Alert.alert(
+      '✅ Payment Successful!',
+      `Order #${orderId} has been created successfully.\n\nAmount deducted from wallet: RM ${parseFloat(total_amount).toFixed(2)}`,  // ⭐ CHANGED: Use orderId
+      [
+        {
+          text: 'View Receipt',
+          onPress: () => {
+            // Reset navigation stack and go to receipt
+            navigation.reset({
+              index: 0,
+              routes: [
+                { name: 'Main' },
+                {
+                  name: 'OrderReceipt',
+                  params: { orderId: orderId }  // ⭐ CHANGED: Use orderId
+                }
+              ],
+            });
+          }
+        }
+      ]
+    );
+
+  } catch (error) {
+    console.error('❌ Payment error:', error);
+    
+    if (error.message.includes('Insufficient wallet balance')) {
       Alert.alert(
-        '✅ Payment Successful!',
-        `Order #${response.data.order_id} has been created successfully.\n\nAmount deducted from wallet: RM ${parseFloat(checkoutData.total_amount).toFixed(2)}`,
+        'Insufficient Balance',
+        'Your wallet balance is not enough for this purchase. Please top up your wallet.',
         [
+          { text: 'Cancel', style: 'cancel' },
           {
-            text: 'View Receipt',
-            onPress: () => {
-              // Reset navigation stack and go to receipt
-              navigation.reset({
-                index: 0,
-                routes: [
-                  { name: 'Main' },
-                  {
-                    name: 'OrderReceipt',
-                    params: { orderId: response.data.order_id }
-                  }
-                ],
-              });
-            }
+            text: 'Top Up',
+            onPress: () => navigation.navigate('TopUp')
           }
         ]
       );
-
-    } catch (error) {
-      console.error('❌ Payment error:', error);
-      
-      if (error.message.includes('Insufficient wallet balance')) {
-        Alert.alert(
-          'Insufficient Balance',
-          'Your wallet balance is not enough for this purchase. Please top up your wallet.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Top Up',
-              onPress: () => navigation.navigate('TopUp')
-            }
-          ]
-        );
-      } else if (error.message === 'Product is no longer available') {
-        Alert.alert(
-          'Product Unavailable',
-          'This product was just purchased by another buyer.',
-          [{ text: 'OK', onPress: () => navigation.navigate('Main') }]
-        );
-      } else {
-        Alert.alert(
-          'Payment Failed',
-          error.message || 'Unable to process payment. Please try again.',
-          [{ text: 'OK' }]
-        );
-      }
-    } finally {
-      setProcessing(false);
+    } else if (error.message === 'Product is no longer available') {
+      Alert.alert(
+        'Product Unavailable',
+        'This product was just purchased by another buyer.',
+        [{ text: 'OK', onPress: () => navigation.navigate('Main') }]
+      );
+    } else {
+      Alert.alert(
+        'Payment Failed',
+        error.message || 'Unable to process payment. Please try again.',
+        [{ text: 'OK' }]
+      );
     }
-  };
+  } finally {
+    setProcessing(false);
+  }
+};
 
   if (loading) {
     return (
@@ -151,7 +159,7 @@ const PaymentScreen = ({ route, navigation }) => {
     );
   }
 
-  const orderAmount = parseFloat(checkoutData.total_amount);
+  const orderAmount = parseFloat(total_amount);
   const currentBalance = parseFloat(walletBalance.balance);
   const hasSufficientBalance = currentBalance >= orderAmount;
   const shortage = hasSufficientBalance ? 0 : orderAmount - currentBalance;
@@ -226,10 +234,10 @@ const PaymentScreen = ({ route, navigation }) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Product Details</Text>
           <View style={styles.productCard}>
-            <Text style={styles.productName}>{checkoutData.product.name}</Text>
-            <Text style={styles.productCategory}>{checkoutData.product.category}</Text>
+            <Text style={styles.productName}>{product.name}</Text>
+            <Text style={styles.productCategory}>{product.category}</Text>
             <View style={styles.conditionBadge}>
-              <Text style={styles.conditionText}>{checkoutData.product.condition}</Text>
+              <Text style={styles.conditionText}>{product.condition}</Text>
             </View>
           </View>
         </View>

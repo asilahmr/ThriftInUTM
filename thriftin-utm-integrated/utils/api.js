@@ -7,7 +7,12 @@ console.log('🔧 Base URL:', config?.baseURL);
 
 // ✅ FIXED: Remove /api from baseURL since routes already include it
 const api = axios.create({
+<<<<<<< HEAD
   baseURL: config?.baseURL || 'http://10.201.106.118:3000',  // No /api here
+=======
+  baseURL: config?.baseURL || 'http://10.134.246.207:3000' + '/api',  
+  
+>>>>>>> c2f6aec2c62deb03673842f85dd1a163ad852624
   timeout: 180000,
 });
 
