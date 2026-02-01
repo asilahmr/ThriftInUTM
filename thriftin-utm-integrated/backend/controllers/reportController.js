@@ -1,11 +1,13 @@
 // backend/controllers/reportController.js
 const db = require('../config/db');
+const path = require('path');
+const fs = require('fs');
 
 const query = (sql, params) => {
   return new Promise((resolve, reject) => {
     db.query(sql, params, (err, result) => {
       if (err) {
-        console.error('Database Error:', err);
+        console.error('❌ Database Error:', err);
         reject(err);
       } else {
         resolve(result);
@@ -14,10 +16,22 @@ const query = (sql, params) => {
   });
 };
 
-const path = require('path');
-const fs = require('fs');
+// Test endpoint to verify server is working
+exports.testEndpoint = async (req, res) => {
+  console.log('🧪 Test endpoint hit!');
+  res.json({ 
+    success: true, 
+    message: 'Backend is working!',
+    timestamp: new Date().toISOString()
+  });
+};
 
+// Submit a new report with optional evidence
 exports.submitReport = async (req, res) => {
+  console.log('📥 Report submission request received');
+  console.log('📋 Request body:', req.body);
+  console.log('📎 File attached:', !!req.file);
+  
   try {
     const { 
       reporter_id, 
@@ -28,21 +42,31 @@ exports.submitReport = async (req, res) => {
       description 
     } = req.body;
 
-    console.log('📝 Receiving report submission:', {
+    console.log('🔍 Receiving report submission:', {
       reporter_id,
       reported_user_id,
       reason,
+      description_length: description?.length,
       has_evidence: !!req.file
     });
 
+    // Validation
     if (!reporter_id || !reported_user_id || !reason || !description) {
+      console.log('❌ Missing required fields');
       return res.status(400).json({ 
         error: 'Missing required fields',
-        details: 'reporter_id, reported_user_id, reason, and description are required'
+        details: 'reporter_id, reported_user_id, reason, and description are required',
+        received: {
+          reporter_id: !!reporter_id,
+          reported_user_id: !!reported_user_id,
+          reason: !!reason,
+          description: !!description
+        }
       });
     }
 
     if (parseInt(reporter_id) === parseInt(reported_user_id)) {
+      console.log('❌ User trying to report themselves');
       return res.status(400).json({ 
         error: 'Cannot report yourself' 
       });
@@ -56,9 +80,15 @@ exports.submitReport = async (req, res) => {
       evidencePath = req.file.path;  
       evidenceType = req.file.mimetype;
       evidenceUrl = `${req.protocol}://${req.get('host')}/uploads/evidence/${req.file.filename}`;
-      console.log('📎 Evidence uploaded:', evidencePath, 'URL:', evidenceUrl);
+      console.log('📸 Evidence uploaded:', {
+        path: evidencePath,
+        type: evidenceType,
+        size: req.file.size,
+        url: evidenceUrl
+      });
     }
 
+    // Insert report into database
     const result = await query(`
       INSERT INTO user_reports (
         reporter_id, 
@@ -84,31 +114,47 @@ exports.submitReport = async (req, res) => {
 
     console.log('✅ Report submitted successfully, ID:', result.insertId);
 
+    // Check total reports for this user
     const reportCount = await query(`
       SELECT COUNT(*) as count 
       FROM user_reports 
       WHERE reported_user_id = ?
     `, [reported_user_id]);
 
-    if (reportCount[0].count >= 2) {
+    const totalReports = reportCount[0].count;
+    console.log(`📊 Total reports for user ${reported_user_id}: ${totalReports}`);
+
+    // Auto-restrict if 2 or more reports
+    if (totalReports >= 2) {
       await query(`
         UPDATE students 
         SET account_status = 'restricted' 
         WHERE user_id = ?
       `, [reported_user_id]);
       
-      console.log(`⚠️ User ${reported_user_id} auto-restricted (${reportCount[0].count} reports)`);
+      console.log(`⚠️ User ${reported_user_id} auto-restricted (${totalReports} reports)`);
     }
 
-    res.json({ 
+    console.log('📤 Preparing to send response...');
+console.log('📤 Response data:', {
+  success: true,
+  report_id: result.insertId,
+  total_reports: totalReports,
+  has_evidence: !!evidenceUrl
+});
+
+    res.status(200).json({ 
       success: true, 
       message: 'Report submitted successfully',
       report_id: result.insertId,
-      total_reports: reportCount[0].count,
-      evidenceUrl: evidenceUrl 
+      total_reports: totalReports,
+      evidenceUrl: evidenceUrl,
+      user_restricted: totalReports >= 2
     });
+
   } catch (error) {
     console.error('❌ Error submitting report:', error);
+    console.error('Stack trace:', error.stack);
     res.status(500).json({ 
       error: 'Failed to submit report',
       details: error.message 
@@ -116,29 +162,37 @@ exports.submitReport = async (req, res) => {
   }
 };
 
+// Report a user (simpler version without evidence)
 exports.reportUser = async (req, res) => {
   try {
     const { reporter_id, reported_id, conversation_id, message_id, reason, additional_details } = req.body;
     
+    console.log('📝 Report user request:', { reporter_id, reported_id, reason });
+
+    if (!reporter_id || !reported_id) {
+      return res.status(400).json({ 
+        error: 'Missing required fields',
+        details: 'reporter_id and reported_id are required'
+      });
+    }
+    
     const result = await query(`
       INSERT INTO user_reports (reporter_id, reported_id, conversation_id, message_id, reason, additional_details)
       VALUES (?, ?, ?, ?, ?, ?)
-    `, [reporter_id, reported_id, conversation_id, message_id, reason, additional_details || '']);
+    `, [reporter_id, reported_id, conversation_id || null, message_id || null, reason, additional_details || '']);
     
-    res.json({ 
-      success: true, 
-      message: 'Report submitted successfully',
-      report_id: result.insertId 
-    });
+    console.log('✅ User reported, ID:', result.insertId);
+    res.status(200).json({ success: true, message: "User reported successfully" });
   } catch (error) {
-    console.error('Error submitting report:', error);
-    res.status(500).json({ error: 'Failed to submit report' });
+    console.error('❌ Error reporting user:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
+// Block a user
 exports.blockUser = async (req, res) => {
   try {
-    const { blocker_id, blocked_id, reason } = req.body;
+    const { blocker_id, blocked_id, reason, additional_details } = req.body;
     
     console.log('🚫 Block request:', { blocker_id, blocked_id, reason });
 
@@ -163,12 +217,14 @@ exports.blockUser = async (req, res) => {
     `, [blocker_id, blocked_id]);
 
     if (existing.length > 0) {
+      console.log('⚠️ User already blocked');
       return res.status(400).json({ 
         error: 'User already blocked',
         block_id: existing[0].block_id
       });
     }
     
+    // Insert block
     const result = await query(`
       INSERT INTO blocked_users (blocker_id, blocked_id, reason, block_status)
       VALUES (?, ?, ?, 'active')
@@ -176,7 +232,7 @@ exports.blockUser = async (req, res) => {
     
     console.log('✅ User blocked successfully, ID:', result.insertId);
 
-    res.json({ 
+    res.status(200).json({ 
       success: true, 
       message: 'User blocked successfully',
       block_id: result.insertId 
@@ -190,13 +246,17 @@ exports.blockUser = async (req, res) => {
   }
 };
 
+// Get list of blocked users
 exports.getBlockedUsers = async (req, res) => {
   try {
     const { userId } = req.params;
     
+    console.log('📋 Fetching blocked users for:', userId);
+    
     const blocks = await query(`
       SELECT b.*, u.email, s.name as blocked_username,
-             s.profile_image as blocked_profile_picture
+             s.profile_image as blocked_profile_picture,
+             s.matric as blocked_matric
       FROM blocked_users b
       JOIN user u ON b.blocked_id = u.id
       LEFT JOIN students s ON b.blocked_id = s.user_id
@@ -204,16 +264,20 @@ exports.getBlockedUsers = async (req, res) => {
       ORDER BY b.blocked_at DESC
     `, [userId]);
     
+    console.log(`✅ Found ${blocks.length} blocked users`);
     res.json(blocks);
   } catch (error) {
-    console.error('Error fetching blocked users:', error);
+    console.error('❌ Error fetching blocked users:', error);
     res.status(500).json({ error: 'Failed to fetch blocked users' });
   }
 };
 
+// Unblock a user
 exports.unblockUser = async (req, res) => {
   try {
     const { blockId } = req.params;
+    
+    console.log('🔓 Unblocking user, block ID:', blockId);
     
     await query(`
       UPDATE blocked_users 
@@ -221,16 +285,20 @@ exports.unblockUser = async (req, res) => {
       WHERE block_id = ?
     `, [blockId]);
     
+    console.log('✅ User unblocked successfully');
     res.json({ success: true, message: 'User unblocked successfully' });
   } catch (error) {
-    console.error('Error unblocking user:', error);
+    console.error('❌ Error unblocking user:', error);
     res.status(500).json({ error: 'Failed to unblock user' });
   }
 };
 
+// Get user's submitted reports
 exports.getUserReports = async (req, res) => {
   try {
     const { userId } = req.params;
+
+    console.log('📋 Fetching reports for user:', userId);
 
     const reports = await query(`
       SELECT r.*, 
@@ -247,6 +315,9 @@ exports.getUserReports = async (req, res) => {
 
     const formattedReports = reports.map(r => ({
       id: r.id,
+      reported_user_id: r.reported_user_id,
+      reported_username: r.reported_username,
+      reported_matric: r.reported_matric,
       reason: r.reason,
       description: r.description,
       status: r.status,
@@ -257,29 +328,32 @@ exports.getUserReports = async (req, res) => {
         : null
     }));
 
-    console.log(`Found ${reports.length} reports for user ${userId}`);
-
+    console.log(`✅ Found ${reports.length} reports for user ${userId}`);
     res.json(formattedReports);
   } catch (error) {
-    console.error('Error fetching reports:', error);
+    console.error('❌ Error fetching reports:', error);
     res.status(500).json({ error: 'Failed to fetch reports' });
   }
 };
 
+// Update report status (admin function)
 exports.updateReportStatus = async (req, res) => {
   try {
     const { reportId } = req.params;
     const { status, admin_notes } = req.body;
     
+    console.log('🔄 Updating report status:', { reportId, status });
+    
     await query(`
       UPDATE user_reports
       SET status = ?, admin_notes = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `, [status, admin_notes, reportId]);
+    `, [status, admin_notes || null, reportId]);
     
+    console.log('✅ Report status updated');
     res.json({ success: true, message: 'Report status updated' });
   } catch (error) {
-    console.error('Error updating report status:', error);
+    console.error('❌ Error updating report status:', error);
     res.status(500).json({ error: 'Failed to update report status' });
   }
 };

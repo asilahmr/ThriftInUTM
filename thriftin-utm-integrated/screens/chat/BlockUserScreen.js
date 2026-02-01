@@ -1,533 +1,269 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  ActivityIndicator,
-  Alert,
-  Modal
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert, Modal } from 'react-native';
 import SuccessModal from '../../components/common/SuccessModal';
-import api from '../../utils/api'; // ✅ Use the api instance with auth
+import api from '../../utils/api'; 
 
 const BlockUserScreen = ({ navigation, route }) => {
   const { blockedId, blockerId, blockedUsername } = route.params;
-  
   const [selectedReason, setSelectedReason] = useState('');
   const [additionalDetails, setAdditionalDetails] = useState('');
   const [loading, setLoading] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  const reasons = [
-    { 
-      value: 'spam', 
-      label: 'Spam', 
-      icon: '🚫',
-      description: 'Sending unwanted or repetitive messages'
-    },
-    { 
-      value: 'harassment', 
-      label: 'Harassment', 
-      icon: '😠',
-      description: 'Offensive or threatening behavior'
-    },
-    { 
-      value: 'inappropriate', 
-      label: 'Inappropriate Content', 
-      icon: '🔞',
-      description: 'Sending inappropriate messages or images'
-    },
-    { 
-      value: 'fake_profile', 
-      label: 'Fake Profile', 
-      icon: '🎭',
-      description: 'Suspicious or impersonating account'
-    },
-    { 
-      value: 'scam', 
-      label: 'Scam/Fraud', 
-      icon: '⚠️',
-      description: 'Fraudulent behavior or scam attempts'
-    },
-    { 
-      value: 'other', 
-      label: 'Other', 
-      icon: '❓',
-      description: 'Other reason not listed above'
-    }
-  ];
-
-  const blockUser = async () => {
-    if (!selectedReason) {
-      Alert.alert('Required', 'Please select a reason for blocking this user', [{ text: 'OK' }]);
-      return;
-    }
-
-    if (selectedReason === 'other' && !additionalDetails.trim()) {
-      Alert.alert('Required', 'Please provide details for "Other" reason', [{ text: 'OK' }]);
-      return;
-    }
-
-    if (additionalDetails.trim().length > 0 && additionalDetails.trim().length < 10) {
-      Alert.alert('Too Short', 'Please provide more details (at least 10 characters)', [{ text: 'OK' }]);
-      return;
-    }
-
-    setShowConfirm(true);
-  };
-
   const confirmBlock = async () => {
+    if (!selectedReason) {
+      Alert.alert('Error', 'Please select a reason for blocking');
+      return;
+    }
+
     setShowConfirm(false);
     setLoading(true);
-
+    
     try {
-      console.log('🚫 Blocking user:', {
-        blocker_id: blockerId,
-        blocked_id: blockedId,
-        reason: selectedReason
-      });
-
-      // ✅ Use api instance instead of axios directly
+      console.log('🚫 Blocking user:', { blockerId, blockedId, reason: selectedReason });
+      
+      // ✅ Include /api prefix to match server.js mounting
       const response = await api.post('/api/reports/block', {
         blocker_id: blockerId,
         blocked_id: blockedId,
         reason: selectedReason,
-        additional_details: additionalDetails.trim()
+        additional_details: additionalDetails.trim() || ''
       });
 
-      console.log('✅ Block response:', response.data);
+      console.log('✅ Block successful:', response.data);
       setLoading(false);
       setShowSuccessModal(true);
+      
     } catch (error) {
       setLoading(false);
-      console.error('❌ Error blocking user:', error);
-      console.error('Error response:', error.response?.data);
+      console.error('❌ Block Error:', error.response?.data || error.message);
       
-      Alert.alert(
-        'Error',
-        error.response?.data?.error || 'Failed to block user. Please try again.',
-        [{ text: 'OK' }]
-      );
+      const errorMessage = error.response?.data?.error || 
+                          error.response?.data?.message || 
+                          'Failed to block user. Please try again.';
+      
+      Alert.alert('Error', errorMessage);
     }
-  };
-
-  const handleModalClose = () => {
-    setShowSuccessModal(false);
-    navigation.navigate('ChatList');
   };
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Block {blockedUsername}</Text>
-          <Text style={styles.subtitle}>
-            Blocking this user will prevent all future communication
-          </Text>
-        </View>
-
+      <ScrollView style={styles.content}>
+        <Text style={styles.title}>Block {blockedUsername}</Text>
+        
         <View style={styles.warningBox}>
-          <Text style={styles.warningIcon}>🚫</Text>
-          <View style={styles.warningContent}>
-            <Text style={styles.warningTitle}>When you block this user:</Text>
-            <Text style={styles.warningText}>
-              • You won't receive messages from them{'\n'}
-              • They won't see your online status{'\n'}
-              • Your conversation will be hidden{'\n'}
-              • They won't be notified about the block{'\n'}
-              • You can unblock them later from settings
+          <Text style={styles.warningText}>⚠️ They won't be able to message you or see your profile.</Text>
+        </View>
+        
+        <Text style={styles.label}>Reason for blocking *</Text>
+        {['spam', 'harassment', 'scam', 'other'].map(r => (
+          <TouchableOpacity 
+            key={r} 
+            style={[styles.opt, selectedReason === r && styles.sel]} 
+            onPress={() => setSelectedReason(r)}
+          >
+            <Text style={[styles.optText, selectedReason === r && styles.selText]}>
+              {r.charAt(0).toUpperCase() + r.slice(1)}
             </Text>
-          </View>
-        </View>
+          </TouchableOpacity>
+        ))}
 
-        <Text style={styles.sectionTitle}>Reason for Blocking *</Text>
-        <Text style={styles.sectionSubtitle}>
-          Please select why you're blocking this user
-        </Text>
-        <View style={styles.reasonsContainer}>
-          {reasons.map(reason => (
-            <TouchableOpacity
-              key={reason.value}
-              style={[
-                styles.reasonOption,
-                selectedReason === reason.value && styles.reasonSelected
-              ]}
-              onPress={() => setSelectedReason(reason.value)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.radioButton}>
-                {selectedReason === reason.value && (
-                  <View style={styles.radioButtonSelected} />
-                )}
-              </View>
-              <View style={styles.reasonContent}>
-                <View style={styles.reasonHeader}>
-                  <Text style={styles.reasonIcon}>{reason.icon}</Text>
-                  <Text style={styles.reasonText}>{reason.label}</Text>
-                </View>
-                <Text style={styles.reasonDescription}>{reason.description}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <Text style={styles.sectionTitle}>
-          Additional Details {selectedReason === 'other' ? '*' : '(Optional)'}
-        </Text>
-        <Text style={styles.sectionSubtitle}>
-          {selectedReason === 'other' 
-            ? 'Please explain your reason (minimum 10 characters)' 
-            : 'Provide more information if needed'}
-        </Text>
+        <Text style={styles.label}>Additional details (optional)</Text>
         <TextInput
-          style={styles.textArea}
-          placeholder="Example: This user keeps sending spam messages about unrelated products..."
+          style={styles.input}
+          placeholder="Provide more context if needed..."
           value={additionalDetails}
           onChangeText={setAdditionalDetails}
           multiline
-          numberOfLines={6}
-          textAlignVertical="top"
-          maxLength={500}
-          placeholderTextColor="#999"
+          numberOfLines={4}
         />
-        <Text style={styles.charCount}>{additionalDetails.length}/500</Text>
 
-        <View style={styles.tipsBox}>
-          <Text style={styles.tipsTitle}>💡 Before you block:</Text>
-          <Text style={styles.tipsText}>
-            • Consider reporting if they've violated our policies{'\n'}
-            • You can also mute notifications instead{'\n'}
-            • Blocking is reversible from your settings{'\n'}
-            • Serious violations should be reported to our team
-          </Text>
-        </View>
-
-        <TouchableOpacity
-          style={[styles.blockButton, loading && styles.blockButtonDisabled]}
-          onPress={blockUser}
-          disabled={loading}
-          activeOpacity={0.8}
+        <TouchableOpacity 
+          style={[styles.btn, (!selectedReason || loading) && styles.btnDisabled]} 
+          onPress={() => setShowConfirm(true)} 
+          disabled={!selectedReason || loading}
         >
           {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
+            <ActivityIndicator color="#FFF"/>
           ) : (
-            <>
-              <Text style={styles.blockButtonIcon}>🚫</Text>
-              <Text style={styles.blockButtonText}>Block {blockedUsername}</Text>
-            </>
+            <Text style={styles.btnText}>Block User</Text>
           )}
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.cancelButton}
-          onPress={() => navigation.goBack()}
-          disabled={loading}
-        >
-          <Text style={styles.cancelButtonText}>Cancel</Text>
-        </TouchableOpacity>
-
-        <View style={styles.spacer} />
       </ScrollView>
 
       {/* Confirmation Modal */}
-      <Modal
-        visible={showConfirm}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowConfirm(false)}
-      >
-        <View style={styles.confirmOverlay}>
-          <View style={styles.confirmDialog}>
-            <Text style={styles.confirmIcon}>🚫</Text>
-            <Text style={styles.confirmTitle}>Block {blockedUsername}?</Text>
-            <Text style={styles.confirmMessage}>
-              Are you sure you want to block this user? You won't be able to send or receive messages from them until you unblock.
+      <Modal visible={showConfirm} transparent animationType="fade">
+        <View style={styles.modal}>
+          <View style={styles.dialog}>
+            <Text style={styles.dialogTitle}>Confirm Block?</Text>
+            <Text style={styles.dialogText}>
+              Are you sure you want to block {blockedUsername}? This action can be reversed later.
             </Text>
-            <View style={styles.confirmButtons}>
-              <TouchableOpacity
-                style={styles.confirmCancelButton}
+            <View style={styles.dialogButtons}>
+              <TouchableOpacity 
+                style={[styles.dialogBtn, styles.cancelBtn]} 
                 onPress={() => setShowConfirm(false)}
-                activeOpacity={0.7}
               >
-                <Text style={styles.confirmCancelText}>Cancel</Text>
+                <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.confirmBlockButton}
+              <TouchableOpacity 
+                style={[styles.dialogBtn, styles.confirmBtn]} 
                 onPress={confirmBlock}
-                activeOpacity={0.7}
               >
-                <Text style={styles.confirmBlockText}>Block User</Text>
+                <Text style={styles.btnText}>Block</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
 
-      <SuccessModal
-        visible={showSuccessModal}
-        message={`Successfully blocked ${blockedUsername}. You won't receive messages from them anymore.`}
-        onClose={handleModalClose}
+      {/* Success Modal */}
+      <SuccessModal 
+        visible={showSuccessModal} 
+        message={`${blockedUsername} has been blocked`}
+        onClose={() => {
+          setShowSuccessModal(false);
+          navigation.navigate('ChatList');
+        }} 
       />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
+  container: { 
+    flex: 1, 
+    backgroundColor: '#F5F5F5' 
   },
-  content: {
-    flex: 1,
-    padding: 20,
+  content: { 
+    padding: 20 
   },
-  header: {
-    marginBottom: 20,
+  title: { 
+    fontSize: 24, 
+    fontWeight: 'bold', 
+    marginBottom: 15,
+    color: '#1F2937'
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#000000',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#666666',
-  },
-  warningBox: {
-    flexDirection: 'row',
-    backgroundColor: '#FFEBEE',
-    padding: 14,
-    borderRadius: 8,
+  warningBox: { 
+    backgroundColor: '#FFEBEE', 
+    padding: 15, 
+    borderRadius: 8, 
     marginBottom: 20,
     borderLeftWidth: 4,
-    borderLeftColor: '#D32F2F',
+    borderLeftColor: '#D32F2F'
   },
-  warningIcon: {
-    fontSize: 24,
-    marginRight: 10,
-  },
-  warningContent: {
-    flex: 1,
-  },
-  warningTitle: {
+  warningText: { 
+    color: '#C62828',
     fontSize: 14,
-    fontWeight: '600',
-    color: '#C62828',
-    marginBottom: 6,
+    lineHeight: 20
   },
-  warningText: {
-    fontSize: 13,
-    color: '#C62828',
-    lineHeight: 20,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 6,
-  },
-  sectionSubtitle: {
-    fontSize: 13,
-    color: '#666666',
-    marginBottom: 12,
-  },
-  reasonsContainer: {
-    marginBottom: 20,
-  },
-  reasonOption: {
-    flexDirection: 'row',
-    padding: 14,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
+  label: { 
+    fontWeight: '600', 
     marginBottom: 10,
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
-  },
-  reasonSelected: {
-    borderColor: '#D32F2F',
-    backgroundColor: '#FFEBEE',
-  },
-  radioButton: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: '#D32F2F',
-    marginRight: 12,
-    marginTop: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  radioButtonSelected: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#D32F2F',
-  },
-  reasonContent: {
-    flex: 1,
-  },
-  reasonHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  reasonIcon: {
-    fontSize: 18,
-    marginRight: 6,
-  },
-  reasonText: {
+    marginTop: 5,
     fontSize: 15,
-    fontWeight: '600',
-    color: '#000000',
+    color: '#374151'
   },
-  reasonDescription: {
-    fontSize: 13,
-    color: '#666666',
-    lineHeight: 18,
+  opt: { 
+    backgroundColor: '#FFF', 
+    padding: 16, 
+    borderRadius: 8, 
+    marginBottom: 10, 
+    borderWidth: 2, 
+    borderColor: '#E5E7EB' 
   },
-  textArea: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    padding: 12,
+  sel: { 
+    borderColor: '#D32F2F', 
+    backgroundColor: '#FEF2F2' 
+  },
+  optText: {
     fontSize: 15,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    minHeight: 120,
-    color: '#000000',
+    color: '#6B7280'
   },
-  charCount: {
-    fontSize: 12,
-    color: '#999999',
-    textAlign: 'right',
-    marginTop: 4,
+  selText: {
+    color: '#D32F2F',
+    fontWeight: '600'
+  },
+  input: { 
+    backgroundColor: '#FFF', 
+    padding: 12, 
+    borderRadius: 8, 
+    minHeight: 100, 
+    textAlignVertical: 'top', 
+    borderWidth: 1, 
+    borderColor: '#E5E7EB',
+    fontSize: 14,
+    marginBottom: 20
+  },
+  btn: { 
+    backgroundColor: '#D32F2F', 
+    padding: 16, 
+    borderRadius: 8, 
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 30
+  },
+  btnDisabled: {
+    backgroundColor: '#FCA5A5',
+    opacity: 0.6
+  },
+  btnText: { 
+    color: '#FFF', 
+    fontWeight: 'bold',
+    fontSize: 16
+  },
+  modal: { 
+    flex: 1, 
+    backgroundColor: 'rgba(0,0,0,0.5)', 
+    justifyContent: 'center', 
+    padding: 20 
+  },
+  dialog: { 
+    backgroundColor: '#FFF', 
+    padding: 24, 
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5
+  },
+  dialogTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    color: '#1F2937'
+  },
+  dialogText: {
+    fontSize: 14,
+    color: '#6B7280',
     marginBottom: 20,
+    lineHeight: 20
   },
-  tipsBox: {
-    backgroundColor: '#FFFBF0',
+  dialogButtons: {
+    flexDirection: 'row',
+    gap: 10
+  },
+  dialogBtn: {
+    flex: 1,
     padding: 14,
     borderRadius: 8,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: '#FF9800',
+    alignItems: 'center'
   },
-  tipsTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#E65100',
-    marginBottom: 8,
-  },
-  tipsText: {
-    fontSize: 13,
-    color: '#E65100',
-    lineHeight: 20,
-  },
-  blockButton: {
-    backgroundColor: '#D32F2F',
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-    marginBottom: 12,
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  blockButtonDisabled: {
-    backgroundColor: '#CCCCCC',
-  },
-  blockButtonIcon: {
-    fontSize: 20,
-    marginRight: 8,
-  },
-  blockButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  cancelButton: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
+  cancelBtn: {
+    backgroundColor: '#F3F4F6',
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: '#D1D5DB'
   },
-  cancelButtonText: {
-    color: '#666666',
-    fontSize: 16,
-    fontWeight: '500',
+  confirmBtn: {
+    backgroundColor: '#D32F2F'
   },
-  spacer: {
-    height: 20,
-  },
-  confirmOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  confirmDialog: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    maxWidth: 340,
-    alignItems: 'center',
-  },
-  confirmIcon: {
-    fontSize: 48,
-    marginBottom: 12,
-  },
-  confirmTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#000000',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  confirmMessage: {
-    fontSize: 15,
-    color: '#666666',
-    marginBottom: 24,
-    lineHeight: 22,
-    textAlign: 'center',
-  },
-  confirmButtons: {
-    flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-  },
-  confirmCancelButton: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: '#F5F5F5',
-    alignItems: 'center',
-  },
-  confirmCancelText: {
-    fontSize: 15,
+  cancelBtnText: {
+    color: '#374151',
     fontWeight: '600',
-    color: '#666666',
-  },
-  confirmBlockButton: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: '#D32F2F',
-    alignItems: 'center',
-  },
-  confirmBlockText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
+    fontSize: 15
+  }
 });
 
 export default BlockUserScreen;

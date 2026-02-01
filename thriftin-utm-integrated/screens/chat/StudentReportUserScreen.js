@@ -1,577 +1,241 @@
-// StudentReportUserScreen.js
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-  Image,
-  ActivityIndicator,
-  StatusBar
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, StatusBar, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import * as DocumentPicker from 'expo-document-picker';
-import api from '../../utils/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '../../utils/api'; //
 
 export default function StudentReportUserScreen({ route, navigation }) {
   const { reportedUserId, reportedUserName, reportedUserMatric, currentUserId, currentUserMatric } = route.params;
-
   const [selectedReason, setSelectedReason] = useState('');
   const [description, setDescription] = useState('');
   const [evidence, setEvidence] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const reportReasons = [
-    'Fraudulent listing - fake items',
-    'Spam listings',
-    'Suspicious pricing behavior',
-    'Harassment or inappropriate behavior',
-    'Scam or non-delivery of items',
-    'Fake account or impersonation',
-    'Other'
-  ];
-
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Required', 'Please grant camera roll permissions to upload evidence.');
-      return;
-    }
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'We need camera roll permissions to attach evidence.');
+        return;
+      }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 0.8,
-    });
-
-    if (!result.canceled) {
-      setEvidence({
-        uri: result.assets[0].uri,
-        type: 'image',
-        name: `evidence_${Date.now()}.jpg`
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.7,
+        allowsEditing: true,
       });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        setEvidence({ 
+          uri: asset.uri, 
+          type: 'image', 
+          name: `report_${Date.now()}.jpg`,
+          mimeType: 'image/jpeg'
+        });
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
     }
-  };
-
-const pickDocument = async () => {
-  try {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: '*/*',
-      copyToCacheDirectory: true
-    });
-
-    console.log('📄 Document picker result:', result);
-
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      const file = result.assets[0];
-      console.log('✅ File selected:', {
-        name: file.name,
-        uri: file.uri,
-        mimeType: file.mimeType
-      });
-      
-      setEvidence({
-        uri: file.uri,
-        type: 'document',
-        name: file.name,
-        mimeType: file.mimeType || 'application/pdf'
-      });
-    } else if (result.type === 'success') {
-      console.log('✅ File selected (legacy):', result.name);
-      setEvidence({
-        uri: result.uri,
-        type: 'document',
-        name: result.name,
-        mimeType: result.mimeType || 'application/pdf'
-      });
-    }
-  } catch (error) {
-    console.error('❌ Error picking document:', error);
-    Alert.alert('Error', 'Failed to pick document');
-  }
-};
-
-  const removeEvidence = () => {
-    setEvidence(null);
-  };
-
-  const handleSubmit = async () => {
-    if (!selectedReason) {
-      Alert.alert('Required', 'Please select a reason for reporting.');
-      return;
-    }
-
-    if (!description.trim()) {
-      Alert.alert('Required', 'Please provide a description of the issue.');
-      return;
-    }
-
-    Alert.alert(
-      'Confirm Report',
-      `Are you sure you want to report ${reportedUserName}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Submit',
-          style: 'destructive',
-          onPress: submitReport
-        }
-      ]
-    );
   };
 
 const submitReport = async () => {
+  if (!selectedReason || !description.trim()) {
+    Alert.alert('Missing Information', 'Please select a reason and provide a description');
+    return;
+  }
+
   try {
     setSubmitting(true);
-    console.log('📤 Submitting report...');
-
+    
     const formData = new FormData();
-    formData.append('reporter_id', currentUserId);
-    formData.append('reporter_matric', currentUserMatric);
-    formData.append('reported_user_id', reportedUserId);
-    formData.append('reported_matric', reportedUserMatric);
-    formData.append('reason', selectedReason);
-    formData.append('description', description.trim());
-      
+    
+    formData.append('reporter_id', String(currentUserId));
+    formData.append('reporter_matric', String(currentUserMatric));
+    formData.append('reported_user_id', String(reportedUserId));
+    formData.append('reported_matric', String(reportedUserMatric));
+    formData.append('reason', String(selectedReason));
+    formData.append('description', String(description).trim());
+    
+    console.log('📝 Form data prepared');
+    
     if (evidence) {
-      console.log('📎 Attaching evidence:', {
-        type: evidence.type,
-        name: evidence.name,
-        uri: evidence.uri
-      });
-
+      console.log('📎 Adding file');
       formData.append('evidence', {
         uri: evidence.uri,
-        type: evidence.type === 'image' 
-          ? 'image/jpeg' 
-          : (evidence.mimeType || 'application/octet-stream'),
-        name: evidence.name
+        type: 'image/jpeg',
+        name: `evidence_${Date.now()}.jpg`
       });
     }
 
-    console.log('📤 Sending FormData to API...');
-    const response = await api.post('/api/reports/submit', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+    console.log('🚀 Sending request...');
+    
+    const token = await AsyncStorage.getItem('token');
+    
+    // ✅ 创建超时 Promise
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Request timeout after 30 seconds')), 30000);
     });
-
-    console.log('✅ Report submitted:', response.data);
-
-    Alert.alert(
-      'Report Submitted',
-      'Thank you for reporting. Our team will review this case.',
-      [
-        {
-          text: 'OK',
-          onPress: () => navigation.goBack()
-        }
-      ]
-    );
-  } catch (error) {
-    console.error('❌ Error submitting report:', error);
-    console.error('Error details:', error.response?.data);
-    Alert.alert(
-      'Error',
-      error.response?.data?.error || 'Failed to submit report. Please try again.'
-    );
-  } finally {
+    
+    // ✅ 创建 fetch Promise
+    const fetchPromise = fetch('http://10.201.106.118:3000/api/reports/submit', {
+      method: 'POST',
+      headers: {
+        'Authorization': token ? `Bearer ${token}` : '',
+      },
+      body: formData,
+    });
+    
+    // ✅ Race between fetch and timeout
+    const response = await Promise.race([fetchPromise, timeoutPromise]);
+    
+    console.log('📡 Response received, status:', response.status);
+    console.log('📡 Response headers:', response.headers);
+    
+    // ✅ 检查响应是否有内容
+    const contentType = response.headers.get('content-type');
+    console.log('📡 Content-Type:', contentType);
+    
+    let data;
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+      console.log('✅ Response data:', data);
+    } else {
+      const text = await response.text();
+      console.log('⚠️ Non-JSON response:', text);
+      throw new Error('Server returned non-JSON response');
+    }
+    
     setSubmitting(false);
+    
+    if (response.ok && data.success) {
+      Alert.alert(
+        'Report Submitted', 
+        'Our team will review your report shortly.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
+    } else {
+      Alert.alert('Submission Failed', data.error || data.message || 'Unknown error');
+    }
+    
+  } catch (error) {
+    setSubmitting(false);
+    
+    console.error('❌ Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+    
+    if (error.message.includes('timeout')) {
+      Alert.alert(
+        'Request Timeout', 
+        'The server is taking too long to respond. The report may have been submitted. Please check your reports list.',
+        [
+          { text: 'Check Reports', onPress: () => navigation.goBack() },
+          { text: 'OK' }
+        ]
+      );
+    } else {
+      Alert.alert('Submission Failed', error.message || 'Network error occurred');
+    }
   }
 };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#DC2626" />
-
       <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Report User</Text>
-          <View style={{ width: 24 }} />
-        </View>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#FFF" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Report User</Text>
+        <View style={{width: 24}}/>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* User Info */}
-        <View style={styles.userCard}>
-          <View style={styles.userHeader}>
-            <Ionicons name="alert-circle" size={24} color="#DC2626" />
-            <Text style={styles.userHeaderText}>Reporting</Text>
-          </View>
-          <View style={styles.userInfo}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {(reportedUserName || 'U').charAt(0).toUpperCase()}
-              </Text>
-            </View>
-            <View style={styles.userDetails}>
-              <Text style={styles.userName}>{reportedUserName}</Text>
-              <Text style={styles.userMatric}>{reportedUserMatric}</Text>
-            </View>
-          </View>
+      <ScrollView style={styles.content}>
+        <View style={styles.userInfoBox}>
+          <Text style={styles.userInfoLabel}>Reporting:</Text>
+          <Text style={styles.userName}>{reportedUserName}</Text>
         </View>
 
-        {/* Reason Selection */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Reason for Report *</Text>
-          {reportReasons.map((reason) => (
-            <TouchableOpacity
-              key={reason}
-              style={[
-                styles.reasonOption,
-                selectedReason === reason && styles.reasonSelected
-              ]}
-              onPress={() => setSelectedReason(reason)}
-            >
-              <View style={[
-                styles.radioOuter,
-                selectedReason === reason && styles.radioOuterSelected
-              ]}>
-                {selectedReason === reason && (
-                  <View style={styles.radioInner} />
-                )}
-              </View>
-              <Text style={[
-                styles.reasonText,
-                selectedReason === reason && styles.reasonTextSelected
-              ]}>
-                {reason}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Description */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Description *</Text>
-          <Text style={styles.sectionSubtitle}>
-            Please provide details about this issue
-          </Text>
-          <TextInput
-            style={styles.textArea}
-            placeholder="Describe what happened..."
-            placeholderTextColor="#9CA3AF"
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            numberOfLines={6}
-            textAlignVertical="top"
-          />
-          <Text style={styles.charCount}>{description.length} / 500</Text>
-        </View>
-
-        {/* Evidence Upload */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Evidence (Optional)</Text>
-          <Text style={styles.sectionSubtitle}>
-            Upload screenshots or documents to support your report
-          </Text>
-
-          {!evidence ? (
-            <View style={styles.uploadButtons}>
-                <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
-                <Ionicons name="image-outline" size={24} color="#4B5563" />
-                <Text style={styles.uploadButtonText}>Upload Image</Text>
-            </TouchableOpacity>
-                <TouchableOpacity style={styles.uploadButton} onPress={pickDocument}>
-                <Ionicons name="document-outline" size={24} color="#4B5563" />
-                <Text style={styles.uploadButtonText}>Upload Document</Text>
-                </TouchableOpacity>
+        <Text style={styles.label}>Reason for Report *</Text>
+        {['Spam', 'Harassment', 'Scam', 'Other'].map(r => (
+          <TouchableOpacity 
+            key={r} 
+            style={[styles.opt, selectedReason === r && styles.sel]} 
+            onPress={() => setSelectedReason(r)}
+          >
+            <View style={styles.radioOuter}>
+              {selectedReason === r && <View style={styles.radioInner} />}
             </View>
-            ) : (
+            <Text style={[styles.optText, selectedReason === r && styles.selText]}>{r}</Text>
+          </TouchableOpacity>
+        ))}
+        
+        <Text style={styles.label}>Description *</Text>
+        <TextInput 
+          style={styles.input} 
+          placeholder="Describe what happened..."
+          value={description} 
+          onChangeText={setDescription} 
+          multiline 
+          numberOfLines={5}
+        />
+        
+        <Text style={styles.label}>Evidence (Optional)</Text>
+        <TouchableOpacity style={styles.upload} onPress={pickImage}>
+          {evidence ? (
             <View style={styles.evidencePreview}>
-                {evidence.type === 'image' ? (
-                <Image source={{ uri: evidence.uri }} style={styles.evidenceImage} />
-                ) : (
-                <View style={styles.documentPreview}>
-                    <Ionicons name="document-text" size={48} color="#6B7280" />
-                    <Text style={styles.documentName} numberOfLines={2}>
-                    {evidence.name}
-                    </Text>
-                </View>
-                )}
-                <TouchableOpacity style={styles.removeButton} onPress={removeEvidence}>
-                <Ionicons name="close-circle" size={24} color="#DC2626" />
-                </TouchableOpacity>
+              <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+              <Text style={styles.evidenceText}>{evidence.name}</Text>
+              <TouchableOpacity onPress={() => setEvidence(null)}>
+                <Ionicons name="close-circle" size={20} color="#EF4444" />
+              </TouchableOpacity>
             </View>
-            )}
-
-        </View>
-
-        {/* Warning */}
-        <View style={styles.warningCard}>
-          <Ionicons name="warning" size={20} color="#F59E0B" />
-          <Text style={styles.warningText}>
-            False reports may result in action against your account. Please ensure all information is accurate.
-          </Text>
-        </View>
-
-        {/* Submit Button */}
-        <TouchableOpacity
-          style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
-          onPress={handleSubmit}
-          disabled={submitting}
-        >
-          {submitting ? (
-            <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <>
-              <Ionicons name="shield-checkmark" size={20} color="#FFFFFF" />
-              <Text style={styles.submitButtonText}>Submit Report</Text>
-            </>
+            <View style={styles.uploadContent}>
+              <Ionicons name="cloud-upload-outline" size={32} color="#6B7280" />
+              <Text style={styles.uploadText}>Tap to upload evidence</Text>
+            </View>
           )}
         </TouchableOpacity>
 
-        <View style={{ height: 40 }} />
+        <TouchableOpacity 
+          style={[styles.btn, (submitting || !selectedReason || !description.trim()) && styles.btnDisabled]} 
+          onPress={submitReport} 
+          disabled={submitting || !selectedReason || !description.trim()}
+        >
+          {submitting ? <ActivityIndicator color="#FFF" /> : <Text style={styles.btnText}>Submit Report</Text>}
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F3F4F6'
+  container: { flex: 1, backgroundColor: '#F3F4F6' },
+  header: { 
+    backgroundColor: '#DC2626', 
+    paddingTop: Platform.OS === 'ios' ? 50 : 40,
+    paddingBottom: 15, paddingHorizontal: 16,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'
   },
-  header: {
-    backgroundColor: '#DC2626',
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#FFFFFF'
-  },
-  content: {
-    flex: 1,
-    paddingTop: 20,
-  },
-  userCard: {
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 16,
-    marginBottom: 20,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 2,
-    borderColor: '#FEE2E2',
-  },
-  userHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  userHeaderText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#DC2626',
-    marginLeft: 8,
-  },
-  userInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#FEE2E2',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  avatarText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#DC2626',
-  },
-  userDetails: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  userMatric: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  section: {
-    marginHorizontal: 16,
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  sectionSubtitle: {
-    fontSize: 13,
-    color: '#6B7280',
-    marginBottom: 12,
-  },
-  reasonOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 8,
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-  },
-  reasonSelected: {
-    borderColor: '#DC2626',
-    backgroundColor: '#FEF2F2',
-  },
-  radioOuter: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#D1D5DB',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  radioOuterSelected: {
-    borderColor: '#DC2626',
-  },
-  radioInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#DC2626',
-  },
-  reasonText: {
-    fontSize: 14,
-    color: '#374151',
-    flex: 1,
-  },
-  reasonTextSelected: {
-    color: '#DC2626',
-    fontWeight: '500',
-  },
-  textArea: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 14,
-    color: '#111827',
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    minHeight: 120,
-  },
-  charCount: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    textAlign: 'right',
-    marginTop: 4,
-  },
-  uploadButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  uploadButton: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    borderStyle: 'dashed',
-  },
-  uploadButtonText: {
-    fontSize: 13,
-    color: '#4B5563',
-    fontWeight: '500',
-    marginTop: 8,
-  },
-  evidencePreview: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 8,
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    position: 'relative',
-  },
-  evidenceImage: {
-    width: '100%',
-    height: 200,
-    borderRadius: 8,
-    resizeMode: 'cover',
-  },
-  documentPreview: {
-    alignItems: 'center',
-    padding: 32,
-  },
-  documentName: {
-    fontSize: 14,
-    color: '#374151',
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  removeButton: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 4,
-  },
-  warningCard: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFBEB',
-    marginHorizontal: 16,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#FCD34D',
-    marginBottom: 20,
-  },
-  warningText: {
-    flex: 1,
-    fontSize: 12,
-    color: '#92400E',
-    marginLeft: 8,
-    lineHeight: 18,
-  },
-  submitButton: {
-    flexDirection: 'row',
-    backgroundColor: '#DC2626',
-    marginHorizontal: 16,
-    padding: 16,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 2,
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
-  },
-  submitButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginLeft: 8,
-  },
+  headerTitle: { color: '#FFF', fontSize: 18, fontWeight: 'bold' },
+  content: { padding: 20 },
+  userInfoBox: { backgroundColor: '#FEF2F2', padding: 16, borderRadius: 12, marginBottom: 24, borderLeftWidth: 4, borderLeftColor: '#DC2626' },
+  userName: { fontSize: 18, fontWeight: 'bold', color: '#1F2937' },
+  label: { fontWeight: '700', marginBottom: 10, marginTop: 12, fontSize: 15, color: '#1F2937' },
+  opt: { backgroundColor: '#FFF', padding: 14, borderRadius: 10, marginBottom: 10, borderWidth: 2, borderColor: '#E5E7EB', flexDirection: 'row', alignItems: 'center' },
+  sel: { borderColor: '#DC2626', backgroundColor: '#FEF2F2' },
+  radioOuter: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: '#D1D5DB', marginRight: 12, justifyContent: 'center', alignItems: 'center' },
+  radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#DC2626' },
+  input: { backgroundColor: '#FFF', padding: 14, borderRadius: 10, minHeight: 120, textAlignVertical: 'top', borderWidth: 1, borderColor: '#E5E7EB' },
+  upload: { backgroundColor: '#FFF', padding: 20, borderRadius: 10, marginTop: 4, marginBottom: 20, alignItems: 'center', borderStyle: 'dashed', borderWidth: 2, borderColor: '#D1D5DB' },
+  evidencePreview: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  evidenceText: { flex: 1, fontSize: 14, color: '#10B981' },
+  btn: { backgroundColor: '#DC2626', padding: 16, borderRadius: 10, alignItems: 'center', marginBottom: 30 },
+  btnDisabled: { backgroundColor: '#FCA5A5' },
+  btnText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 }
 });

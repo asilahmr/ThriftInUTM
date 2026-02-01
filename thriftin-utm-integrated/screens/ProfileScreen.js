@@ -16,7 +16,9 @@ import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import api from '../utils/api';
-import { COLORS, API_BASE_URL as API_URL } from '../utils/constants';
+import { COLORS, API_BASE_URL} from '../utils/constants';
+
+const API_URL = API_BASE_URL.replace('/api', '');
 
 const ProfileScreen = ({ navigation }) => {
   const [userData, setUserData] = useState(null);

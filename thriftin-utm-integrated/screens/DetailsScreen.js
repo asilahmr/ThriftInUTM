@@ -16,7 +16,7 @@ import * as ExpoImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import api from '../utils/api';
 
-const API_URL = 'http://10.61.234.113:3000';
+const API_URL = 'http://10.201.106.118:3000';
 
 const DetailsScreen = ({ navigation }) => {
   const [userData, setUserData] = useState({

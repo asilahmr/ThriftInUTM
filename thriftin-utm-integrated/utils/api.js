@@ -3,12 +3,11 @@ import axios from 'axios';
 import config from '../config';
 
 console.log('🚀 utils/api.js loaded');
-console.log('📍 Base URL:', config?.baseURL);
+console.log('🔧 Base URL:', config?.baseURL);
 
-// axios instance
+// ✅ FIXED: Remove /api from baseURL since routes already include it
 const api = axios.create({
-  baseURL: config?.baseURL || 'http://172.20.10.4:3000' + '/api',  
-  
+  baseURL: config?.baseURL || 'http://10.201.106.118:3000',  // No /api here
   timeout: 180000,
 });
 
@@ -42,6 +41,7 @@ api.interceptors.request.use(
       }
 
       console.log('📤 Request:', config.method?.toUpperCase(), config.url);
+      console.log('🔗 Full URL:', config.baseURL + config.url);
     } catch (error) {
       console.error('❌ Error in request interceptor:', error);
     }

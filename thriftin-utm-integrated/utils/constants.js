@@ -3,7 +3,7 @@
 // API Configuration
 // Change this to your computer's IP address when testing on physical device
 // Find your IP: Windows (ipconfig), Mac/Linux (ifconfig)
-export const API_BASE_URL = 'http://172.20.10.4:3000/api';
+export const API_BASE_URL = 'http://10.201.106.118:3000/api';
 // For Android emulator: 'http://10.0.2.2:3000/api'
 // For iOS simulator: 'http://localhost:3000/api'
 

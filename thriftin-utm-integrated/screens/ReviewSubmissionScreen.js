@@ -110,7 +110,7 @@ const ReviewSubmissionScreen = ({ navigation, route }) => {
       cleanPath = cleanPath.substring(1);
     }
     
-    const imageUrl = `http://172.20.10.4:3000/${cleanPath}`;
+    const imageUrl = `http://10.201.106.118:3000/${cleanPath}`;
     console.log('Image URL:', imageUrl);
     console.log('Original file path:', review.filePath);
     return imageUrl;

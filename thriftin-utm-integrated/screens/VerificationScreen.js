@@ -13,7 +13,7 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import api from '../utils/api';
 
-const API_URL = 'http://172.20.10.4:3000';
+const API_URL = 'http://10.201.106.118:3000';
 
 export default function VerificationScreen({ navigation }) {
   const [matricCardImage, setMatricCardImage] = useState(null);

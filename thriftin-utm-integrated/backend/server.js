@@ -31,8 +31,8 @@ app.use(cors({
   credentials: true
 }));
 app.use(bodyParser.json());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve uploads as static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -1011,7 +1011,12 @@ app.use((req, res) => {
 
 // Start the server
 
-app.listen(3000, () => {
+// app.listen(3000, () => {
+//   console.log("✅ Server running on port 3000");
+//   console.log("📡 Notification routes available at: http://localhost:3000/api/notifications");
+// });
+
+app.listen(3000, '0.0.0.0', () => {
   console.log("✅ Server running on port 3000");
-  console.log("📡 Notification routes available at: http://localhost:3000/api/notifications");
+  console.log("🌐 Server accessible at http://10.201.106.118:3000");
 });
