@@ -35,3 +35,4 @@ A project of Application Development that allow selling and buying preloved or u
 
 ## Notes:
 1. Click on file names to navigate directly to their respective files in the repository.
+2. Sprint 4 has been merged into the Integration branch.
