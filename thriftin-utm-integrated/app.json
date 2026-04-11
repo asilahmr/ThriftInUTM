@@ -45,15 +45,6 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["react-native-vision-camera"],
-    "extra": {
-      "eas": {
-        "projectId": "a89b065d-7aca-485f-936f-3932a3d98f7a"
-      }
-    },
-    "owner": "awst",
-    "runtimeVersion": {
-      "policy": "appVersion"
-    }
+    "plugins": ["react-native-vision-camera"]
   }
 }
