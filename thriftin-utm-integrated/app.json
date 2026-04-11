@@ -10,8 +10,9 @@
     "newArchEnabled": true,
     "updates": {
       "enabled": false,
-      "checkAutomatically": "never",
-      "fallbackToCacheTimeout": 0
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/a89b065d-7aca-485f-936f-3932a3d98f7a"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -23,18 +24,26 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "my.utm.thriftin"
+      "bundleIdentifier": "my.utm.thriftin",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Allow $(PRODUCT_NAME) to access your camera"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-       "package": "my.utm.thriftin",
+      "package": "my.utm.thriftin",
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
+        "WRITE_EXTERNAL_STORAGE",
+        "android.permission.CAMERA",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "android.permission.CAMERA"
       ],
       "edgeToEdgeEnabled": true
     },
@@ -43,6 +52,15 @@
     },
     "plugins": [
       "react-native-vision-camera"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "a89b065d-7aca-485f-936f-3932a3d98f7a"
+      }
+    },
+    "owner": "awst",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    }
   }
 }

@@ -1,5 +1,5 @@
 // backend/server.js
-require('dotenv').config();
+require("dotenv").config();
 
 const express = require("express");
 const mysql = require("mysql2");
@@ -7,73 +7,75 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const bcrypt = require("bcrypt");
 const nodemailer = require("nodemailer");
-const path = require('path');
-const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
-const aiRoutes = require('./routes/ai');
-const fs = require('fs')
+const path = require("path");
+const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
+const aiRoutes = require("./routes/ai");
+const fs = require("fs");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Get JWT_SECRET once and use consistently
-const JWT_SECRET = process.env.JWT_SECRET || 'your-fallback-secret-key-change-in-production';
+const JWT_SECRET =
+  process.env.JWT_SECRET || "your-fallback-secret-key-change-in-production";
 
-console.log('\n=== SERVER STARTUP ===');
-console.log('JWT_SECRET loaded:', process.env.JWT_SECRET ? 'Yes' : 'No');
-console.log('JWT_SECRET value:', JWT_SECRET);
-console.log('Port:', PORT);
-console.log('======================\n');
+console.log("\n=== SERVER STARTUP ===");
+console.log("JWT_SECRET loaded:", process.env.JWT_SECRET ? "Yes" : "No");
+console.log("JWT_SECRET value:", JWT_SECRET);
+console.log("Port:", PORT);
+console.log("======================\n");
 
 // ==================== MIDDLEWARE ====================
-app.use(cors({
-  origin: '*', // Configure this properly for production
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: "*", // Configure this properly for production
+    credentials: true,
+  }),
+);
 app.use(bodyParser.json());
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Serve uploads as static files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // ==================== IMPORT ROUTES ====================
-const emailController = require('./controllers/emailController');
-const accountRoutes = require('./routes/accountRoutes');
-const profileRoutes = require('./routes/profileRoutes');
-const emailRoutes = require('./routes/emailRoutes');
-const verifyRoutes = require('./routes/verifyRoutes');
-const adminRoutes = require('./routes/adminRoutes');
+const emailController = require("./controllers/emailController");
+const accountRoutes = require("./routes/accountRoutes");
+const profileRoutes = require("./routes/profileRoutes");
+const emailRoutes = require("./routes/emailRoutes");
+const verifyRoutes = require("./routes/verifyRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 
-const productRoutes = require('./routes/productRoutes');
-const marketplaceRoutes = require('./routes/marketplaceRoutes');
-const orderRoutes = require('./routes/orderRoutes');
-const walletRoutes = require('./routes/walletRoutes');
-const salesRoutes = require('./routes/salesRoutes');
-const buyingRoutes = require('./routes/buyerRoutes');
-const reportRoutes = require('./routes/reports');
+const productRoutes = require("./routes/productRoutes");
+const marketplaceRoutes = require("./routes/marketplaceRoutes");
+const orderRoutes = require("./routes/orderRoutes");
+const walletRoutes = require("./routes/walletRoutes");
+const salesRoutes = require("./routes/salesRoutes");
+const buyingRoutes = require("./routes/buyerRoutes");
+const reportRoutes = require("./routes/reports");
 
-const conversationRoutes = require('./routes/conversations');
-const messageRoutes = require('./routes/messages');
+const conversationRoutes = require("./routes/conversations");
+const messageRoutes = require("./routes/messages");
 
-const analyticsRoutes = require('./routes/analyticsRoutes');
-const notificationRoutes = require('./routes/notifications');
-const feedbackRoutes = require('./routes/feedback');
-const helpRoutes = require('./routes/helpCenter'); 
-
+const analyticsRoutes = require("./routes/analyticsRoutes");
+const notificationRoutes = require("./routes/notifications");
+const feedbackRoutes = require("./routes/feedback");
+const helpRoutes = require("./routes/helpCenter");
 
 // ==================== NOTIFICATION ROUTES (INLINE) ====================
 // Add this section to your main server.js where you mount routes
 // This bypasses the external router module to avoid any import issues
 
-console.log('📍 Mounting inline notification routes...');
+console.log("📍 Mounting inline notification routes...");
 
 // Helper function for database queries
 const notificationQuery = (sql, params) => {
   return new Promise((resolve, reject) => {
     db.query(sql, params, (err, result) => {
       if (err) {
-        console.error('Database query error:', err);
+        console.error("Database query error:", err);
         reject(err);
       } else {
         resolve(result);
@@ -83,175 +85,205 @@ const notificationQuery = (sql, params) => {
 };
 
 // Test endpoint
-app.get('/api/notifications/test', (req, res) => {
-  console.log('📍 Test endpoint hit');
-  res.json({ 
-    success: true, 
-    message: 'Notification routes are working!',
-    timestamp: new Date().toISOString()
+app.get("/api/notifications/test", (req, res) => {
+  console.log("📍 Test endpoint hit");
+  res.json({
+    success: true,
+    message: "Notification routes are working!",
+    timestamp: new Date().toISOString(),
   });
 });
 
 // Get preferences (must come before /:userId to avoid route conflict)
-app.get('/api/notifications/preferences/:userId', async (req, res) => {
+app.get("/api/notifications/preferences/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
-    console.log('⚙️ Getting preferences for user:', userId);
-    
-    let prefs = await notificationQuery(`
+    console.log("⚙️ Getting preferences for user:", userId);
+
+    let prefs = await notificationQuery(
+      `
       SELECT * FROM user_notification_preferences WHERE user_id = ?
-    `, [userId]);
-    
+    `,
+      [userId],
+    );
+
     if (prefs.length === 0) {
-      console.log('📝 Creating default preferences');
-      await notificationQuery(`
+      console.log("📝 Creating default preferences");
+      await notificationQuery(
+        `
         INSERT INTO user_notification_preferences (
           user_id, new_messages_enabled, system_updates_enabled, push_enabled
         ) VALUES (?, 1, 1, 1)
-      `, [userId]);
-      
-      prefs = await notificationQuery(`
+      `,
+        [userId],
+      );
+
+      prefs = await notificationQuery(
+        `
         SELECT * FROM user_notification_preferences WHERE user_id = ?
-      `, [userId]);
+      `,
+        [userId],
+      );
     }
-    
-    console.log('✅ Preferences retrieved');
+
+    console.log("✅ Preferences retrieved");
     res.json(prefs[0]);
   } catch (error) {
-    console.error('❌ Error getting preferences:', error);
+    console.error("❌ Error getting preferences:", error);
     res.status(500).json({ error: error.message });
   }
 });
 
 // Update preferences
-app.put('/api/notifications/preferences/:userId', async (req, res) => {
+app.put("/api/notifications/preferences/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
     const prefs = req.body;
-    console.log('💾 Updating preferences for user:', userId, prefs);
-    
-    const existing = await notificationQuery(`
+    console.log("💾 Updating preferences for user:", userId, prefs);
+
+    const existing = await notificationQuery(
+      `
       SELECT * FROM user_notification_preferences WHERE user_id = ?
-    `, [userId]);
-    
+    `,
+      [userId],
+    );
+
     if (existing.length === 0) {
-      await notificationQuery(`
+      await notificationQuery(
+        `
         INSERT INTO user_notification_preferences (
           user_id, new_messages_enabled, system_updates_enabled, push_enabled
         ) VALUES (?, ?, ?, ?)
-      `, [
-        userId, 
-        prefs.new_messages_enabled ?? true, 
-        prefs.system_updates_enabled ?? true, 
-        prefs.push_enabled ?? true
-      ]);
+      `,
+        [
+          userId,
+          prefs.new_messages_enabled ?? true,
+          prefs.system_updates_enabled ?? true,
+          prefs.push_enabled ?? true,
+        ],
+      );
     } else {
-      await notificationQuery(`
+      await notificationQuery(
+        `
         UPDATE user_notification_preferences
         SET new_messages_enabled = ?,
             system_updates_enabled = ?,
             push_enabled = ?
         WHERE user_id = ?
-      `, [
-        prefs.new_messages_enabled ?? existing[0].new_messages_enabled,
-        prefs.system_updates_enabled ?? existing[0].system_updates_enabled,
-        prefs.push_enabled ?? existing[0].push_enabled,
-        userId
-      ]);
+      `,
+        [
+          prefs.new_messages_enabled ?? existing[0].new_messages_enabled,
+          prefs.system_updates_enabled ?? existing[0].system_updates_enabled,
+          prefs.push_enabled ?? existing[0].push_enabled,
+          userId,
+        ],
+      );
     }
-    
-    console.log('✅ Preferences updated');
-    res.json({ success: true, message: 'Settings saved' });
+
+    console.log("✅ Preferences updated");
+    res.json({ success: true, message: "Settings saved" });
   } catch (error) {
-    console.error('❌ Error updating preferences:', error);
+    console.error("❌ Error updating preferences:", error);
     res.status(500).json({ error: error.message });
   }
 });
 
 // Get unread count (must come before /:userId)
-app.get('/api/notifications/:userId/unread-count', async (req, res) => {
+app.get("/api/notifications/:userId/unread-count", async (req, res) => {
   try {
     const { userId } = req.params;
-    console.log('📊 Getting unread count for user:', userId);
-    
-    const result = await notificationQuery(`
+    console.log("📊 Getting unread count for user:", userId);
+
+    const result = await notificationQuery(
+      `
       SELECT COUNT(*) as count FROM notifications
       WHERE user_id = ? AND is_read = FALSE
-    `, [userId]);
-    
-    console.log('✅ Unread count:', result[0].count);
+    `,
+      [userId],
+    );
+
+    console.log("✅ Unread count:", result[0].count);
     res.json({ count: result[0].count });
   } catch (error) {
-    console.error('❌ Error getting unread count:', error);
+    console.error("❌ Error getting unread count:", error);
     res.status(500).json({ error: error.message });
   }
 });
 
 // Mark all as read (must come before /:notificationId)
-app.put('/api/notifications/read-all/:userId', async (req, res) => {
+app.put("/api/notifications/read-all/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
-    console.log('✓ Marking all notifications as read for user:', userId);
-    
-    const result = await notificationQuery(`
+    console.log("✓ Marking all notifications as read for user:", userId);
+
+    const result = await notificationQuery(
+      `
       UPDATE notifications
       SET is_read = TRUE, read_at = CURRENT_TIMESTAMP
       WHERE user_id = ? AND is_read = FALSE
-    `, [userId]);
-    
-    console.log('✅ Marked all as read');
+    `,
+      [userId],
+    );
+
+    console.log("✅ Marked all as read");
     res.json({ success: true, count: result.affectedRows });
   } catch (error) {
-    console.error('❌ Error marking all as read:', error);
+    console.error("❌ Error marking all as read:", error);
     res.status(500).json({ error: error.message });
   }
 });
 
 // Mark single notification as read
-app.put('/api/notifications/:notificationId/read', async (req, res) => {
+app.put("/api/notifications/:notificationId/read", async (req, res) => {
   try {
     const { notificationId } = req.params;
-    console.log('✓ Marking notification as read:', notificationId);
-    
-    await notificationQuery(`
+    console.log("✓ Marking notification as read:", notificationId);
+
+    await notificationQuery(
+      `
       UPDATE notifications
       SET is_read = TRUE, read_at = CURRENT_TIMESTAMP
       WHERE notification_id = ?
-    `, [notificationId]);
-    
-    console.log('✅ Marked as read');
+    `,
+      [notificationId],
+    );
+
+    console.log("✅ Marked as read");
     res.json({ success: true });
   } catch (error) {
-    console.error('❌ Error marking as read:', error);
+    console.error("❌ Error marking as read:", error);
     res.status(500).json({ error: error.message });
   }
 });
 
 // Delete notification
-app.delete('/api/notifications/:notificationId', async (req, res) => {
+app.delete("/api/notifications/:notificationId", async (req, res) => {
   try {
     const { notificationId } = req.params;
-    console.log('🗑️ Deleting notification:', notificationId);
-    
-    await notificationQuery(`
+    console.log("🗑️ Deleting notification:", notificationId);
+
+    await notificationQuery(
+      `
       DELETE FROM notifications WHERE notification_id = ?
-    `, [notificationId]);
-    
-    console.log('✅ Notification deleted');
-    res.json({ success: true, message: 'Notification deleted' });
+    `,
+      [notificationId],
+    );
+
+    console.log("✅ Notification deleted");
+    res.json({ success: true, message: "Notification deleted" });
   } catch (error) {
-    console.error('❌ Error deleting notification:', error);
+    console.error("❌ Error deleting notification:", error);
     res.status(500).json({ error: error.message });
   }
 });
 
 // Get notifications (MUST BE LAST among /:userId patterns)
-app.get('/api/notifications/:userId', async (req, res) => {
+app.get("/api/notifications/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
     const { type, limit = 50 } = req.query;
-    console.log('📥 Getting notifications for user:', userId);
-    
+    console.log("📥 Getting notifications for user:", userId);
+
     let sql = `
       SELECT 
         n.*,
@@ -260,84 +292,86 @@ app.get('/api/notifications/:userId', async (req, res) => {
       LEFT JOIN user u ON n.sender_id = u.id
       WHERE n.user_id = ?
     `;
-    
+
     const params = [userId];
-    
+
     if (type) {
       sql += ` AND n.notification_type = ?`;
       params.push(type);
     }
-    
+
     sql += ` ORDER BY n.created_at DESC LIMIT ?`;
     params.push(parseInt(limit));
-    
+
     const notifications = await notificationQuery(sql, params);
-    
+
     console.log(`✅ Found ${notifications.length} notifications`);
     res.json(notifications);
   } catch (error) {
-    console.error('❌ Error getting notifications:', error);
+    console.error("❌ Error getting notifications:", error);
     res.status(500).json({ error: error.message });
   }
 });
 
-console.log('✅ Inline notification routes mounted');
+console.log("✅ Inline notification routes mounted");
 
 // ==================== END NOTIFICATION ROUTES ====================
 
 // ==================== MOUNT ROUTES ====================
 // routes
-app.use('/api/account', accountRoutes);
-app.use('/api/profile', profileRoutes);
-app.use('/api/email', emailRoutes);
-app.use('/api/verification', verifyRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/analytics', analyticsRoutes);
-
+app.use("/api/account", accountRoutes);
+app.use("/api/profile", profileRoutes);
+app.use("/api/email", emailRoutes);
+app.use("/api/verification", verifyRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/analytics", analyticsRoutes);
 
 // Teammate's routes
-app.use('/api/products', productRoutes);
-app.use('/api/marketplace', marketplaceRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/wallet', walletRoutes);
-app.use('/api/sales', salesRoutes);
-app.use('/api/buying', buyingRoutes);
-app.use('/api/conversations', conversationRoutes);
-app.use('/api/messages', messageRoutes);
-app.use('/api/notifications', notificationRoutes); // app.use('/api/notifications', notificationRoutes);
-app.use('/api/ai', aiRoutes);
-app.use('/api/reports', reportRoutes);
-app.use('/api/feedback', feedbackRoutes);
-app.use('/api/help', helpRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/marketplace", marketplaceRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/wallet", walletRoutes);
+app.use("/api/sales", salesRoutes);
+app.use("/api/buying", buyingRoutes);
+app.use("/api/conversations", conversationRoutes);
+app.use("/api/messages", messageRoutes);
+app.use("/api/notifications", notificationRoutes); // app.use('/api/notifications', notificationRoutes);
+app.use("/api/ai", aiRoutes);
+app.use("/api/reports", reportRoutes);
+app.use("/api/feedback", feedbackRoutes);
+app.use("/api/help", helpRoutes);
 
 // ==================== DATABASE CONNECTION ====================
 const db = mysql.createPool({
   host: process.env.DB_HOST || "localhost",
   user: process.env.DB_USER || "root",
-  password: process.env.DB_PASSWORD !== undefined ? process.env.DB_PASSWORD : "admin123",
+  password:
+    process.env.DB_PASSWORD !== undefined
+      ? process.env.DB_PASSWORD
+      : "admin123",
   database: process.env.DB_NAME || "thriftin_utm",
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
 });
 
 // Test database connection
 db.getConnection((err, connection) => {
   if (err) {
-    console.error('❌ Database connection failed:', err);
+    console.error("❌ Database connection failed:", err);
   } else {
-    console.log('✅ Database connected successfully');
+    console.log("✅ Database connected successfully");
     connection.release();
   }
 });
 
 // ==================== EMAIL CONFIGURATION ====================
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  service: "gmail",
   auth: {
-    user: process.env.EMAIL_USER || 'angiewongsiaw@graduate.utm.my',
-    pass: process.env.EMAIL_PASSWORD || 'ojit yekm jlpr jeit'
-  }
+    user: process.env.EMAIL_USER || "angiewongsiaw@graduate.utm.my",
+    pass: process.env.EMAIL_PASSWORD || "ojit yekm jlpr jeit",
+  },
 });
 
 // ==================== HELPER FUNCTIONS ====================
@@ -348,16 +382,16 @@ function parseMatricNumber(matric) {
   let degreeCode, yearCode, facultyCode, studentNumber;
 
   // Foundation: F23SP1234
-  if (matric.startsWith('F')) {
+  if (matric.startsWith("F")) {
     regex = /^(F)(\d{2})SP(\d{4})$/i;
     const match = matric.toUpperCase().match(regex);
     if (!match) return null;
 
     [, degreeCode, yearCode, , studentNumber] = match;
-    facultyCode = 'SP'; // Foundation special code
+    facultyCode = "SP"; // Foundation special code
   }
   // Bachelor/Degree: A23CS1234
-  else if (matric.startsWith('A')) {
+  else if (matric.startsWith("A")) {
     regex = /^(A)(\d{2})([A-Z]{2})(\d{4})$/i;
     const match = matric.toUpperCase().match(regex);
     if (!match) return null;
@@ -365,7 +399,7 @@ function parseMatricNumber(matric) {
     [, degreeCode, yearCode, facultyCode, studentNumber] = match;
   }
   // Master: MCS221234
-  else if (matric.startsWith('M')) {
+  else if (matric.startsWith("M")) {
     regex = /^(M)([A-Z]{2})(\d{2})(\d{4})$/i;
     const match = matric.toUpperCase().match(regex);
     if (!match) return null;
@@ -373,42 +407,66 @@ function parseMatricNumber(matric) {
     [, degreeCode, facultyCode, yearCode, studentNumber] = match;
   }
   // PhD: PCS221234
-  else if (matric.startsWith('P')) {
+  else if (matric.startsWith("P")) {
     regex = /^(P)([A-Z]{2})(\d{2})(\d{4})$/i;
     const match = matric.toUpperCase().match(regex);
     if (!match) return null;
 
     [, degreeCode, facultyCode, yearCode, studentNumber] = match;
-  }
-  else {
+  } else {
     return null;
   }
 
   let enrollmentYear = parseInt(yearCode);
-  enrollmentYear = (enrollmentYear >= 0 && enrollmentYear <= 50) ? enrollmentYear + 2000 : enrollmentYear + 1900;
+  enrollmentYear =
+    enrollmentYear >= 0 && enrollmentYear <= 50
+      ? enrollmentYear + 2000
+      : enrollmentYear + 1900;
 
   let degreeType, studyDuration;
   switch (degreeCode) {
-    case 'F': degreeType = 'Foundation'; studyDuration = 1; break;
-    case 'A': degreeType = 'Bachelor'; studyDuration = 4; break;
-    case 'M': degreeType = 'Master'; studyDuration = 2; break;
-    case 'P': degreeType = 'PhD'; studyDuration = 5; break;
-    default: return null;
+    case "F":
+      degreeType = "Foundation";
+      studyDuration = 1;
+      break;
+    case "A":
+      degreeType = "Bachelor";
+      studyDuration = 4;
+      break;
+    case "M":
+      degreeType = "Master";
+      studyDuration = 2;
+      break;
+    case "P":
+      degreeType = "PhD";
+      studyDuration = 5;
+      break;
+    default:
+      return null;
   }
 
-  return { degreeType, enrollmentYear, studyDuration, facultyCode, studentNumber };
+  return {
+    degreeType,
+    enrollmentYear,
+    studyDuration,
+    facultyCode,
+    studentNumber,
+  };
 }
 
 // Helper function: validate student status
 function validateStudentStatus(matricInfo) {
   const currentYear = new Date().getFullYear();
-  const estimatedGraduationYear = matricInfo.enrollmentYear + matricInfo.studyDuration;
+  const estimatedGraduationYear =
+    matricInfo.enrollmentYear + matricInfo.studyDuration;
   return currentYear <= estimatedGraduationYear + 1;
 }
 
 // Helper function: validate password strength
 function validatePassword(password) {
-  return password.length >= 8 && /[a-zA-Z]/.test(password) && /[0-9]/.test(password);
+  return (
+    password.length >= 8 && /[a-zA-Z]/.test(password) && /[0-9]/.test(password)
+  );
 }
 
 // Helper function: validate UTM email
@@ -431,22 +489,22 @@ async function sendEmail(to, subject, html) {
       from: '"Thriftin UTM" <angiewongsiaw@graduate.utm.my>',
       to,
       subject,
-      html
+      html,
     });
     return true;
   } catch (error) {
-    console.error('Email sending failed:', error);
+    console.error("Email sending failed:", error);
     return false;
   }
 }
 
 // ==================== HEALTH CHECK ENDPOINT ====================
-app.get('/api/health', (req, res) => {
+app.get("/api/health", (req, res) => {
   res.json({
     success: true,
-    message: 'ThriftIn API is running',
+    message: "ThriftIn API is running",
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || "development",
   });
 });
 
@@ -457,28 +515,52 @@ app.post("/api/auth/register", async (req, res) => {
   const { email, matric, password } = req.body;
 
   if (email.endsWith("@gmail.com")) {
-    return res.status(400).json({ message: "Please use a valid UTM student email (@graduate.utm.my). Admin accounts cannot register." });
+    return res
+      .status(400)
+      .json({
+        message:
+          "Please use a valid UTM student email (@graduate.utm.my). Admin accounts cannot register.",
+      });
   }
 
   // Step 1: Validate email format
   if (!validateUTMEmail(email)) {
-    return res.status(400).json({ message: "Invalid email format. Please enter a valid UTM email." });
+    return res
+      .status(400)
+      .json({
+        message: "Invalid email format. Please enter a valid UTM email.",
+      });
   }
 
   // Step 2: Parse matric number and validate format
   const matricInfo = parseMatricNumber(matric);
   if (!matricInfo) {
-    return res.status(400).json({ message: "Invalid matric number format. Please enter a valid matric number." });
+    return res
+      .status(400)
+      .json({
+        message:
+          "Invalid matric number format. Please enter a valid matric number.",
+      });
   }
 
   // Step 3: Validate password format
   if (!validatePassword(password)) {
-    return res.status(400).json({ message: "Password must be at least 8 characters long and contain letters and numbers." });
+    return res
+      .status(400)
+      .json({
+        message:
+          "Password must be at least 8 characters long and contain letters and numbers.",
+      });
   }
 
   // Step 4: Validate student status
   if (!validateStudentStatus(matricInfo)) {
-    return res.status(403).json({ message: "Your student status cannot be verified. Only current UTM students or graduates within one year are allowed to register." });
+    return res
+      .status(403)
+      .json({
+        message:
+          "Your student status cannot be verified. Only current UTM students or graduates within one year are allowed to register.",
+      });
   }
 
   // Step 5: Check if email or matric number is already registered
@@ -487,28 +569,47 @@ app.post("/api/auth/register", async (req, res) => {
 
   db.query(checkEmailSql, [email], async (err, emailResults) => {
     if (err) {
-      console.error('Database error during registration check:', err);
-      return res.status(500).json({ message: "Database error occurred during registration check." });
+      console.error("Database error during registration check:", err);
+      return res
+        .status(500)
+        .json({
+          message: "Database error occurred during registration check.",
+        });
     }
 
     if (emailResults.length > 0) {
-      return res.status(400).json({ message: "This email or matric number is already registered. Please log in." });
+      return res
+        .status(400)
+        .json({
+          message:
+            "This email or matric number is already registered. Please log in.",
+        });
     }
 
     db.query(checkMatricSql, [matric], async (err, matricResults) => {
       if (err) {
-        console.error('Database error during registration check:', err);
-        return res.status(500).json({ message: "Database error occurred during registration check." });
+        console.error("Database error during registration check:", err);
+        return res
+          .status(500)
+          .json({
+            message: "Database error occurred during registration check.",
+          });
       }
 
       if (matricResults.length > 0) {
-        return res.status(400).json({ message: "This email or matric number is already registered. Please log in." });
+        return res
+          .status(400)
+          .json({
+            message:
+              "This email or matric number is already registered. Please log in.",
+          });
       }
 
       // Step 6: Hash password and store user in database
       try {
         const hashedPassword = await bcrypt.hash(password, 10);
-        const estimatedGraduationYear = matricInfo.enrollmentYear + matricInfo.studyDuration;
+        const estimatedGraduationYear =
+          matricInfo.enrollmentYear + matricInfo.studyDuration;
 
         const insertUserSql = `
           INSERT INTO user 
@@ -518,12 +619,16 @@ app.post("/api/auth/register", async (req, res) => {
 
         db.query(insertUserSql, [email, hashedPassword], (err, userResult) => {
           if (err) {
-            console.error('Database error during registration insert:', err);
-            return res.status(500).json({ message: "Registration failed. Please try again." });
+            console.error("Database error during registration insert:", err);
+            return res
+              .status(500)
+              .json({ message: "Registration failed. Please try again." });
           }
 
           const userId = userResult.insertId;
-          const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
+          const verificationToken = Math.floor(
+            100000 + Math.random() * 900000,
+          ).toString();
 
           const insertStudentSql = `
             INSERT INTO students 
@@ -532,31 +637,55 @@ app.post("/api/auth/register", async (req, res) => {
            VALUES (?, ?, ?, ?, ?, ?, 'unverified', 0, ?, DATE_ADD(NOW(), INTERVAL 1 HOUR))
           `;
 
-          db.query(insertStudentSql,
-            [userId, matric, matricInfo.degreeType, matricInfo.facultyCode,
-              matricInfo.enrollmentYear, estimatedGraduationYear, verificationToken],
+          db.query(
+            insertStudentSql,
+            [
+              userId,
+              matric,
+              matricInfo.degreeType,
+              matricInfo.facultyCode,
+              matricInfo.enrollmentYear,
+              estimatedGraduationYear,
+              verificationToken,
+            ],
             async (err) => {
               if (err) {
-                console.error('Database error during student registration:', err);
-                return res.status(500).json({ message: "Registration failed. Please try again." });
+                console.error(
+                  "Database error during student registration:",
+                  err,
+                );
+                return res
+                  .status(500)
+                  .json({ message: "Registration failed. Please try again." });
               }
 
               try {
-                await emailController.sendVerificationEmail(email, verificationToken);
-                console.log(`✓ New student registered: ${email} - Verification email sent`);
+                await emailController.sendVerificationEmail(
+                  email,
+                  verificationToken,
+                );
+                console.log(
+                  `✓ New student registered: ${email} - Verification email sent`,
+                );
               } catch (emailError) {
-                console.error('Failed to send verification email:', emailError);
+                console.error("Failed to send verification email:", emailError);
               }
 
               res.status(201).json({
-                message: "Registration successful! Please check your email to verify your account."
+                message:
+                  "Registration successful! Please check your email to verify your account.",
               });
-            }
+            },
           );
         });
       } catch (error) {
-        console.error('Error hashing password or inserting user:', error);
-        return res.status(500).json({ message: "An unexpected error occurred during registration. Please try again." });
+        console.error("Error hashing password or inserting user:", error);
+        return res
+          .status(500)
+          .json({
+            message:
+              "An unexpected error occurred during registration. Please try again.",
+          });
       }
     });
   });
@@ -594,7 +723,9 @@ app.post("/api/auth/login", async (req, res) => {
   db.query(sql, [email], async (err, results) => {
     if (err) {
       console.error("❌ Database error during login:", err);
-      return res.status(500).json({ message: "Server error. Please try again later." });
+      return res
+        .status(500)
+        .json({ message: "Server error. Please try again later." });
     }
 
     console.log(`Database query executed for: ${email}`);
@@ -604,7 +735,8 @@ app.post("/api/auth/login", async (req, res) => {
       console.log(`❌ User not found: ${email}`);
 
       // Log failed attempt (no user_id available)
-      const logSql = "INSERT INTO login_attempts (email, success, ip_address) VALUES (?, false, ?)";
+      const logSql =
+        "INSERT INTO login_attempts (email, success, ip_address) VALUES (?, false, ?)";
       db.query(logSql, [email, req.ip], (logErr) => {
         if (logErr) console.error("Error logging attempt:", logErr);
       });
@@ -624,7 +756,7 @@ app.post("/api/auth/login", async (req, res) => {
       const remainingMinutes = Math.ceil((lockExpiry - new Date()) / 60000);
 
       return res.status(423).json({
-        message: `Your account is temporarily locked. Please try again in ${remainingMinutes} minute(s).`
+        message: `Your account is temporarily locked. Please try again in ${remainingMinutes} minute(s).`,
       });
     }
 
@@ -646,7 +778,8 @@ app.post("/api/auth/login", async (req, res) => {
         db.query(updateAttemptsSql, [user.id]);
 
         // Log failed attempt
-        const logSql = "INSERT INTO login_attempts (email, user_id, success, ip_address) VALUES (?, ?, false, ?)";
+        const logSql =
+          "INSERT INTO login_attempts (email, user_id, success, ip_address) VALUES (?, ?, false, ?)";
         db.query(logSql, [email, user.id, req.ip]);
 
         const newAttemptCount = user.failed_login_attempts + 1;
@@ -668,52 +801,62 @@ app.post("/api/auth/login", async (req, res) => {
             <p>If this wasn't you, please contact support immediately.</p>
             <p><strong>Account will be unlocked at:</strong> ${lockUntil.toLocaleString()}</p>`;
 
-          await sendEmail(user.email, 'Account Temporarily Locked - Thriftin UTM', emailHtml);
+          await sendEmail(
+            user.email,
+            "Account Temporarily Locked - Thriftin UTM",
+            emailHtml,
+          );
 
           return res.status(423).json({
-            message: "Your account has been temporarily locked for 30 minutes. Please check your email."
+            message:
+              "Your account has been temporarily locked for 30 minutes. Please check your email.",
           });
         }
 
-        return res.status(401).json({ message: "Incorrect email or password." });
+        return res
+          .status(401)
+          .json({ message: "Incorrect email or password." });
       }
 
       // Password correct - reset failed attempts and update last_login
       console.log(`✓ Password correct for: ${user.email}`);
 
-      if (user.user_type === 'student' && user.email_verified === 0) {
+      if (user.user_type === "student" && user.email_verified === 0) {
         console.log(`❌ Email not verified for: ${user.email}`);
         return res.status(403).json({
-          message: 'Please verify your email before logging in. Check your inbox for the verification link.'
+          message:
+            "Please verify your email before logging in. Check your inbox for the verification link.",
         });
       }
 
-      if (user.user_type === 'student') {
+      if (user.user_type === "student") {
         const [studentData] = await new Promise((resolve, reject) => {
           db.query(
-            'SELECT account_status FROM students WHERE user_id = ?',
+            "SELECT account_status FROM students WHERE user_id = ?",
             [user.id],
             (err, results) => {
               if (err) reject(err);
               else resolve([results]);
-            }
+            },
           );
         });
 
         if (studentData.length > 0) {
           const accountStatus = studentData[0].account_status;
 
-          if (accountStatus === 'permanently_suspended') {
+          if (accountStatus === "permanently_suspended") {
             console.log(`Account permanently suspended: ${user.email}`);
             return res.status(403).json({
-              message: 'Your account has been permanently suspended due to violation of platform rules. Please contact support for more information.'
+              message:
+                "Your account has been permanently suspended due to violation of platform rules. Please contact support for more information.",
             });
           }
 
-          if (accountStatus === 'suspended') {
+          if (accountStatus === "suspended") {
             console.log(`Account temporarily suspended: ${user.email}`);
             return res.status(403).json({
-              message: 'Your account is temporarily suspended. Please contact support for more information.'
+              message:
+                "Your account is temporarily suspended. Please contact support for more information.",
             });
           }
         }
@@ -728,7 +871,7 @@ app.post("/api/auth/login", async (req, res) => {
       db.query(resetSql, [user.id]);
 
       // Generate JWT Token with consistent secret
-      console.log('Using JWT_SECRET for token generation:', JWT_SECRET);
+      console.log("Using JWT_SECRET for token generation:", JWT_SECRET);
 
       const token = jwt.sign(
         {
@@ -736,24 +879,29 @@ app.post("/api/auth/login", async (req, res) => {
           email: user.email,
           userType: user.user_type,
           email_verified: user.email_verified,
-          is_verified: user.verification_status === 'verified' // Add this for redundancy if needed
+          is_verified: user.verification_status === "verified", // Add this for redundancy if needed
         },
         JWT_SECRET,
-        { expiresIn: '1h' }
+        { expiresIn: "1h" },
       );
 
-      console.log('JWT token generated');
-      console.log('Token (first 30 chars):', token.substring(0, 30) + '...');
-      console.log('Token payload:', { id: user.id, email: user.email, userType: user.user_type });
+      console.log("JWT token generated");
+      console.log("Token (first 30 chars):", token.substring(0, 30) + "...");
+      console.log("Token payload:", {
+        id: user.id,
+        email: user.email,
+        userType: user.user_type,
+      });
 
       // Log successful attempt
-      const logSql = "INSERT INTO login_attempts (email, user_id, success, ip_address) VALUES (?, ?, true, ?)";
+      const logSql =
+        "INSERT INTO login_attempts (email, user_id, success, ip_address) VALUES (?, ?, true, ?)";
       db.query(logSql, [email, user.id, req.ip]);
 
       // Prepare response based on user type
       let responseData;
 
-      if (user.user_type === 'student') {
+      if (user.user_type === "student") {
         console.log(`✓ Student login successful: ${user.email}`);
         responseData = {
           message: "Student login successful",
@@ -766,10 +914,10 @@ app.post("/api/auth/login", async (req, res) => {
             degreeType: user.degree_type,
             enrollmentYear: user.enrollment_year,
             facultyCode: user.faculty_code,
-            estimatedGraduationYear: user.estimated_graduation_year
-          }
+            estimatedGraduationYear: user.estimated_graduation_year,
+          },
         };
-      } else if (user.user_type === 'admin') {
+      } else if (user.user_type === "admin") {
         console.log(`✓ Admin login successful: ${user.email}`);
         responseData = {
           message: "Admin login successful",
@@ -777,8 +925,8 @@ app.post("/api/auth/login", async (req, res) => {
           user: {
             id: user.id,
             email: user.email,
-            userType: user.user_type
-          }
+            userType: user.user_type,
+          },
         };
       } else {
         console.log(`❌ Unknown user type: ${user.user_type}`);
@@ -789,7 +937,6 @@ app.post("/api/auth/login", async (req, res) => {
       console.log("=== LOGIN REQUEST END ===\n");
 
       return res.json(responseData);
-
     } catch (bcryptError) {
       console.error("❌ Bcrypt error:", bcryptError);
       return res.status(500).json({ message: "Authentication error" });
@@ -802,12 +949,20 @@ app.post("/api/auth/recover-password", async (req, res) => {
   const { email } = req.body;
 
   if (email.endsWith("@gmail.com")) {
-    return res.status(400).json({ message: "Admin accounts cannot use the Forgot Password feature." });
+    return res
+      .status(400)
+      .json({
+        message: "Admin accounts cannot use the Forgot Password feature.",
+      });
   }
 
   // Step 1: Validate email format
   if (!validateUTMEmail(email)) {
-    return res.status(400).json({ message: "Invalid email format. Please enter a valid UTM email." });
+    return res
+      .status(400)
+      .json({
+        message: "Invalid email format. Please enter a valid UTM email.",
+      });
   }
 
   // Step 2: Check if email exists and get user record
@@ -821,11 +976,15 @@ app.post("/api/auth/recover-password", async (req, res) => {
   db.query(sql, [email], async (err, results) => {
     if (err) {
       console.error("Database error during password recovery:", err);
-      return res.status(500).json({ message: "Server error. Please try again later." });
+      return res
+        .status(500)
+        .json({ message: "Server error. Please try again later." });
     }
 
     if (results.length === 0) {
-      return res.status(400).json({ message: "The email entered is not registered." });
+      return res
+        .status(400)
+        .json({ message: "The email entered is not registered." });
     }
 
     const user = results[0];
@@ -846,7 +1005,9 @@ app.post("/api/auth/recover-password", async (req, res) => {
     db.query(updateSql, [resetCode, resetTokenExpiry, user.id], async (err) => {
       if (err) {
         console.error("Error storing reset code:", err);
-        return res.status(500).json({ message: "Failed to generate reset code" });
+        return res
+          .status(500)
+          .json({ message: "Failed to generate reset code" });
       }
 
       // Step 5: Send verification code email
@@ -893,17 +1054,30 @@ app.post("/api/auth/recover-password", async (req, res) => {
       `;
 
       try {
-        const emailSent = await sendEmail(email, 'Password Reset Code - Thriftin UTM', emailHtml);
+        const emailSent = await sendEmail(
+          email,
+          "Password Reset Code - Thriftin UTM",
+          emailHtml,
+        );
 
         if (!emailSent) {
-          return res.status(500).json({ message: "Failed to send reset email. Please try again." });
+          return res
+            .status(500)
+            .json({ message: "Failed to send reset email. Please try again." });
         }
 
         console.log(`Reset code sent successfully to ${email}`);
-        res.json({ message: "A 6-digit verification code has been sent to your email." });
+        res.json({
+          message: "A 6-digit verification code has been sent to your email.",
+        });
       } catch (emailError) {
         console.error("Email sending error:", emailError);
-        return res.status(500).json({ message: "Failed to send reset email. Please check your email configuration." });
+        return res
+          .status(500)
+          .json({
+            message:
+              "Failed to send reset email. Please check your email configuration.",
+          });
       }
     });
   });
@@ -915,7 +1089,12 @@ app.post("/api/auth/reset-password", async (req, res) => {
 
   // Step 1: Validate password strength
   if (!validatePassword(newPassword)) {
-    return res.status(400).json({ message: "Password must be at least 8 characters long and contain letters and numbers." });
+    return res
+      .status(400)
+      .json({
+        message:
+          "Password must be at least 8 characters long and contain letters and numbers.",
+      });
   }
 
   // Step 2: Check if token is valid and not expired in students table
@@ -936,7 +1115,9 @@ app.post("/api/auth/reset-password", async (req, res) => {
     }
 
     if (results.length === 0) {
-      return res.status(400).json({ message: "Invalid or expired reset token." });
+      return res
+        .status(400)
+        .json({ message: "Invalid or expired reset token." });
     }
 
     const user = results[0];
@@ -970,16 +1151,23 @@ app.post("/api/auth/reset-password", async (req, res) => {
         db.query(clearTokenSql, [user.id], (err) => {
           if (err) {
             console.error("Error clearing reset token:", err);
-            return res.status(500).json({ message: "Failed to reset password" });
+            return res
+              .status(500)
+              .json({ message: "Failed to reset password" });
           }
 
           console.log(`Password reset successful for user: ${email}`);
-          res.json({ message: "Your password has been reset successfully. You can now log in with your new password." });
+          res.json({
+            message:
+              "Your password has been reset successfully. You can now log in with your new password.",
+          });
         });
       });
     } catch (hashError) {
       console.error("Error hashing new password:", hashError);
-      return res.status(500).json({ message: "Failed to process new password" });
+      return res
+        .status(500)
+        .json({ message: "Failed to process new password" });
     }
   });
 });
@@ -990,23 +1178,23 @@ app.post("/api/auth/reset-password", async (req, res) => {
 app.use((req, res) => {
   res.status(404).json({
     success: false,
-    message: 'Route not found'
+    message: "Route not found",
   });
 });
 
 // Global error handler
 app.use((err, req, res, next) => {
-  console.error('Server error:', err);
+  console.error("Server error:", err);
   res.status(500).json({
     success: false,
-    message: 'Internal server error',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    message: "Internal server error",
+    error: process.env.NODE_ENV === "development" ? err.message : undefined,
   });
 });
 
 app.use((req, res) => {
-     res.status(404).json({ message: 'Route not found' });
-   });
+  res.status(404).json({ message: "Route not found" });
+});
 // ==================== START SERVER ====================
 
 // Start the server
@@ -1016,7 +1204,9 @@ app.use((req, res) => {
 //   console.log("📡 Notification routes available at: http://localhost:3000/api/notifications");
 // });
 
-app.listen(3000, '0.0.0.0', () => {
+app.listen(process.env.PORT || 3000, "0.0.0.0", () => {
   console.log("✅ Server running on port 3000");
-  console.log("🌐 Server accessible at http://10.201.106.118:3000");
+  console.log(
+    "🌐 Server accessible at https://thriftinutm-production.up.railway.app",
+  );
 });
