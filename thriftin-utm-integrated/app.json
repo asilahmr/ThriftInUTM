@@ -9,14 +9,9 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "updates": {
-      "enabled": false,
-      "checkAutomatically": "ON_LOAD",
-      "fallbackToCacheTimeout": 0,
-      "url": "https://u.expo.dev/a89b065d-7aca-485f-936f-3932a3d98f7a"
+      "enabled": false
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -50,9 +45,7 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [
-      "react-native-vision-camera"
-    ],
+    "plugins": ["react-native-vision-camera"],
     "extra": {
       "eas": {
         "projectId": "a89b065d-7aca-485f-936f-3932a3d98f7a"
