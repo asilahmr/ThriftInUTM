@@ -32,7 +32,7 @@ class MarketplaceModel {
       LIMIT ? OFFSET ?
     `;
 
-    const [rows] = await db.execute(query, [userId, limit, offset]);
+    const [rows] = await db.execute(query, [userId, parseInt(limit), parseInt(offset)]);
 
     return rows.map(product => ({
       ...product,
