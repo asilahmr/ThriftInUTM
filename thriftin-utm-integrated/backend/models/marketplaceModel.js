@@ -78,7 +78,7 @@ class MarketplaceModel {
       LIMIT ?
     `;
 
-    const [rows] = await db.execute(query, [userId, searchTerm, searchTerm, limit]);
+  const [rows] = await db.execute(query, [userId, searchTerm, searchTerm, parseInt(limit)]);
 
     return rows.map(product => ({
       ...product,
@@ -122,7 +122,7 @@ class MarketplaceModel {
       LIMIT ?
     `;
 
-    const [rows] = await db.execute(query, [userId, category, limit]);
+const [rows] = await db.execute(query, [userId, category, parseInt(limit)]);
 
     return rows.map(product => ({
       ...product,
@@ -267,7 +267,7 @@ class MarketplaceModel {
       LIMIT ?
     `;
 
-    const [rows] = await db.execute(query, [userId, limit]);
+    const [rows] = await db.execute(query, [userId, parseInt(limit)]);
 
     return rows.map(product => ({
       ...product,
